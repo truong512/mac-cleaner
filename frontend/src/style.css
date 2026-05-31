@@ -100,6 +100,22 @@ nav {
   flex-direction: column;
 }
 
+.keep-alive-page {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.keep-alive-page[hidden] {
+  display: none !important;
+}
+
+.keep-alive-page > .page {
+  flex: 1;
+  min-height: 0;
+}
+
 .page {
   flex: 1;
   min-height: 0;
@@ -137,6 +153,11 @@ nav {
   align-items: stretch;
 }
 
+.grid-2.grid-fill > .card {
+  min-height: 0;
+  overflow: hidden;
+}
+
 .card-scroll {
   display: flex;
   flex-direction: column;
@@ -152,12 +173,32 @@ nav {
 
 .card-scroll > .list,
 .card-scroll > .file-list,
+.card-scroll > .virtual-file-list,
 .card-scroll > .app-list,
 .card-scroll > .scroll-pane,
-.page-body > .dup-groups {
+.page-body > .dup-groups,
+.page-body > .virtual-dup-groups {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+}
+
+.virtual-file-list {
+  display: block;
+}
+
+.virtual-file-list-inner {
+  position: relative;
+  width: 100%;
+}
+
+.virtual-file-row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding-bottom: 8px;
+  box-sizing: border-box;
 }
 
 .action-dock {
@@ -656,6 +697,28 @@ nav {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.virtual-dup-groups {
+  display: block;
+}
+
+.virtual-dup-list-inner {
+  position: relative;
+  width: 100%;
+}
+
+.virtual-dup-row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding-bottom: 12px;
+  box-sizing: border-box;
+}
+
+.dup-empty {
+  flex-shrink: 0;
 }
 
 .dup-header {

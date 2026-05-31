@@ -58,6 +58,10 @@ export function GetLastBigFilesScan() {
   return window['go']['main']['App']['GetLastBigFilesScan']();
 }
 
+export function GetLastDiskMap() {
+  return window['go']['main']['App']['GetLastDiskMap']();
+}
+
 export function GetLastDuplicates() {
   return window['go']['main']['App']['GetLastDuplicates']();
 }

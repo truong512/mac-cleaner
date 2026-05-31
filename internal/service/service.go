@@ -37,6 +37,7 @@ type Service struct {
 	lastDupGroups    []model.DuplicateGroup
 	lastApps         []model.InstalledApp
 	lastDiskTree     *model.DirNode
+	lastDiskRoot     string
 }
 
 func New() (*Service, error) {
@@ -497,10 +498,25 @@ func (s *Service) BuildDiskTree(root string) (*model.DirNode, error) {
 
 	s.mu.Lock()
 	s.lastDiskTree = tree
+	if tree != nil {
+		s.lastDiskRoot = root
+	}
 	s.mu.Unlock()
 
 	s.emit("scan:done", map[string]any{"root": root})
 	return tree, err
+}
+
+func (s *Service) GetLastDiskMap() model.DiskMapSnapshot {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.lastDiskTree == nil {
+		return model.DiskMapSnapshot{}
+	}
+	return model.DiskMapSnapshot{
+		Root: s.lastDiskRoot,
+		Tree: s.lastDiskTree,
+	}
 }
 
 func (s *Service) GetTopFiles(nodePath string, limit int) ([]model.DirNode, error) {
