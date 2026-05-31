@@ -149,6 +149,10 @@ func (a *App) BuildDiskTree(root string) (*model.DirNode, error) {
 	return a.svc.BuildDiskTree(root)
 }
 
+func (a *App) GetLastDiskMap() model.DiskMapSnapshot {
+	return a.svc.GetLastDiskMap()
+}
+
 func (a *App) GetTopFiles(nodePath string, limit int) ([]model.DirNode, error) {
 	return a.svc.GetTopFiles(nodePath, limit)
 }

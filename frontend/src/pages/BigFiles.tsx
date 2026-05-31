@@ -1,31 +1,38 @@
-import { useEffect, useMemo, useState } from 'react';
+import { startTransition, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import {
   CancelScan,
   ExecuteCleanup,
   ForceCleanup,
   GetBigFilesDefaults,
-  GetLastBigFilesScan,
   PreviewCleanup,
   ScanBigFiles,
-  SelectArchivesOnly,
-  SelectBigFilesOnly,
-  ToggleCategory,
 } from '../../wailsjs/go/main/App';
 import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
-import type { CleanupReport, ScanItem } from '../types';
+import type { CleanupReport } from '../types';
 import { model } from '../types';
 import { formatBytes } from '../utils/format';
+import {
+  buildCategoryRows,
+  countSelection,
+  selectArchivesOnly,
+  selectBigFilesOnly,
+  toggleCategorySelection,
+} from '../utils/scanItems';
 import { useConfirmTrash } from '../hooks/useConfirmTrash';
 import { RiskBadge } from '../components/RiskBadge';
+import { VirtualScanFileList } from '../components/VirtualScanFileList';
 import { ActionDock } from '../components/ActionDock';
 import { TrashButton } from '../components/TrashButton';
 import { useTrashButton } from '../hooks/useTrashButton';
 import { useOperationProgress } from '../hooks/useScanProgress';
+import { useScanCache } from '../context/ScanCacheContext';
 
 const MB = 1024 * 1024;
 
 export function BigFiles() {
-  const [items, setItems] = useState<ScanItem[]>([]);
+  const { bigFiles, setBigFiles, ensureBigFiles } = useScanCache();
+  const items = bigFiles ?? [];
+  const deferredItems = useDeferredValue(items);
   const [report, setReport] = useState<CleanupReport | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -47,9 +54,10 @@ export function BigFiles() {
   const actionTotal = cleanRunning ? total : progress?.total ?? 0;
 
   useEffect(() => {
-    GetLastBigFilesScan()
-      .then((items) => setItems(items || []))
-      .catch(() => {});
+    void ensureBigFiles();
+  }, []);
+
+  useEffect(() => {
     GetBigFilesDefaults()
       .then((defaults) => {
         if (defaults.roots?.length) {
@@ -75,28 +83,10 @@ export function BigFiles() {
     return () => EventsOff('cleanup:done');
   }, []);
 
-  const categories = useMemo(() => {
-    const map = new Map<string, model.CategorySummary>();
-    for (const item of items) {
-      const existing = map.get(item.category);
-      if (existing) {
-        existing.itemCount++;
-        existing.sizeBytes += item.sizeBytes;
-      } else {
-        map.set(item.category, {
-          id: item.category,
-          label: item.categoryLabel,
-          risk: item.risk,
-          itemCount: 1,
-          sizeBytes: item.sizeBytes,
-        });
-      }
-    }
-    return Array.from(map.values()).sort((a, b) => b.sizeBytes - a.sizeBytes);
-  }, [items]);
+  const categories = useMemo(() => buildCategoryRows(deferredItems), [deferredItems]);
 
-  const selectedBytes = useMemo(
-    () => items.filter((i) => i.selected).reduce((s, i) => s + i.sizeBytes, 0),
+  const { selectedCount, selectedBytes } = useMemo(
+    () => countSelection(items),
     [items]
   );
 
@@ -118,7 +108,7 @@ export function BigFiles() {
     setLoading(true);
     try {
       const result = await ScanBigFiles(buildRequest());
-      setItems(result || []);
+      setBigFiles(result || []);
       setReport(null);
     } catch (e: any) {
       setError(e?.message || 'Scan failed');
@@ -133,7 +123,6 @@ export function BigFiles() {
   }
 
   async function handleClean() {
-    const selectedCount = items.filter((i) => i.selected).length;
     if (selectedCount === 0) return;
     if (
       !(await requestConfirm(
@@ -158,23 +147,26 @@ export function BigFiles() {
     void handleClean();
   }
 
-  async function selectArchives() {
-    const updated = await SelectArchivesOnly(items);
-    setItems(updated);
+  function selectArchives() {
+    startTransition(() => {
+      setBigFiles((prev) => selectArchivesOnly(prev));
+    });
   }
 
-  async function selectBigFiles() {
-    const updated = await SelectBigFilesOnly(items);
-    setItems(updated);
+  function selectBigFiles() {
+    startTransition(() => {
+      setBigFiles((prev) => selectBigFilesOnly(prev));
+    });
   }
 
-  async function toggleCat(catId: string, selected: boolean) {
-    const updated = await ToggleCategory(items, catId, selected);
-    setItems(updated);
+  function toggleCat(catId: string, selected: boolean) {
+    startTransition(() => {
+      setBigFiles((prev) => toggleCategorySelection(prev, catId, selected));
+    });
   }
 
   function toggleItem(id: string) {
-    setItems((prev) =>
+    setBigFiles((prev) =>
       prev.map((i) => (i.id === id ? { ...i, selected: !i.selected } : i))
     );
   }
@@ -184,7 +176,7 @@ export function BigFiles() {
       ? false
       : mode === 'scan'
         ? !includeBigFiles && !includeArchives
-        : !items.some((i) => i.selected);
+        : selectedCount === 0;
 
   return (
     <div className="page page-with-dock">
@@ -247,7 +239,7 @@ export function BigFiles() {
       {items.length > 0 && (
         <div className="toolbar card">
           <span>
-            <strong>{items.filter((i) => i.selected).length}</strong> selected ·{' '}
+            <strong>{selectedCount}</strong> selected ·{' '}
             {formatBytes(selectedBytes)} to reclaim
           </span>
           <div className="btn-row">
@@ -284,7 +276,7 @@ export function BigFiles() {
                 <label className="checkbox-row">
                   <input
                     type="checkbox"
-                    checked={items.filter((i) => i.category === cat.id).every((i) => i.selected)}
+                    checked={cat.allSelected}
                     onChange={(e) => toggleCat(cat.id, e.target.checked)}
                   />
                   <span>{cat.label}</span>
@@ -299,27 +291,8 @@ export function BigFiles() {
           </div>
 
           <div className="card card-scroll">
-            <h3>Files</h3>
-            <div className="file-list">
-            {items.slice(0, 300).map((item) => (
-              <label key={item.id} className="file-row">
-                <input
-                  type="checkbox"
-                  checked={item.selected}
-                  onChange={() => toggleItem(item.id)}
-                />
-                <div className="file-meta">
-                  <span className="file-path">{item.path}</span>
-                  <span className="muted">{item.categoryLabel}</span>
-                </div>
-                <RiskBadge risk={item.risk} />
-                <span>{formatBytes(item.sizeBytes)}</span>
-              </label>
-            ))}
-            {items.length > 300 && (
-              <p className="muted">Showing first 300 of {items.length} items (sorted by size)</p>
-            )}
-            </div>
+            <h3>Files{items.length > 0 ? ` (${items.length})` : ''}</h3>
+            <VirtualScanFileList items={deferredItems} onToggle={toggleItem} />
           </div>
         </div>
       </div>

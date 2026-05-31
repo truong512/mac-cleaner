@@ -82,6 +82,11 @@ type DirNode struct {
 	Children  []*DirNode `json:"children,omitempty"`
 }
 
+type DiskMapSnapshot struct {
+	Root string   `json:"root"`
+	Tree *DirNode `json:"tree"`
+}
+
 type DiskSummary struct {
 	TotalBytes uint64 `json:"totalBytes"`
 	UsedBytes  uint64 `json:"usedBytes"`

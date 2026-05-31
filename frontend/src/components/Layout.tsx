@@ -1,6 +1,15 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { Navigate, NavLink, useLocation } from 'react-router-dom';
+import { ScanCacheProvider } from '../context/ScanCacheContext';
+import { KeepAlivePage } from './KeepAlivePage';
 import { ProgressOverlay } from './ProgressOverlay';
 import { useOperationProgress } from '../hooks/useScanProgress';
+import { Dashboard } from '../pages/Dashboard';
+import { JunkScan } from '../pages/JunkScan';
+import { Applications } from '../pages/Applications';
+import { Duplicates } from '../pages/Duplicates';
+import { DiskMap } from '../pages/DiskMap';
+import { BigFiles } from '../pages/BigFiles';
+import { SettingsPage } from '../pages/Settings';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: '◉' },
@@ -12,8 +21,11 @@ const navItems = [
   { to: '/settings', label: 'Settings', icon: '⚙' },
 ];
 
+const KNOWN_PATHS = new Set(navItems.map((item) => item.to));
+
 export function Layout() {
   const { progress, active, kind } = useOperationProgress();
+  const path = useLocation().pathname;
 
   return (
     <div className="app-shell">
@@ -40,8 +52,27 @@ export function Layout() {
         </nav>
       </aside>
       <main className="content">
-        <ProgressOverlay progress={progress} visible={active && kind === 'scan'} kind={kind} />
-        <Outlet />
+        <ScanCacheProvider>
+          <ProgressOverlay progress={progress} visible={active && kind === 'scan'} kind={kind} />
+          <KeepAlivePage active={path === '/junk'}>
+            <JunkScan />
+          </KeepAlivePage>
+          <KeepAlivePage active={path === '/apps'}>
+            <Applications />
+          </KeepAlivePage>
+          <KeepAlivePage active={path === '/duplicates'}>
+            <Duplicates />
+          </KeepAlivePage>
+          <KeepAlivePage active={path === '/bigfiles'}>
+            <BigFiles />
+          </KeepAlivePage>
+          <KeepAlivePage active={path === '/disk'}>
+            <DiskMap />
+          </KeepAlivePage>
+          {path === '/' && <Dashboard />}
+          {path === '/settings' && <SettingsPage />}
+          {!KNOWN_PATHS.has(path) && <Navigate to="/" replace />}
+        </ScanCacheProvider>
       </main>
     </div>
   );

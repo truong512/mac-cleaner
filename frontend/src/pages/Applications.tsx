@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import {
   CancelScan,
   GetAppLeftovers,
-  GetLastAppsScan,
   ScanApps,
   UninstallApp,
 } from '../../wailsjs/go/main/App';
@@ -14,9 +13,11 @@ import { TrashButton } from '../components/TrashButton';
 import { ActionDock } from '../components/ActionDock';
 import { useTrashButton } from '../hooks/useTrashButton';
 import { useOperationProgress } from '../hooks/useScanProgress';
+import { useScanCache } from '../context/ScanCacheContext';
 
 export function Applications() {
-  const [apps, setApps] = useState<InstalledApp[]>([]);
+  const { apps: cachedApps, setApps, ensureApps } = useScanCache();
+  const apps = cachedApps ?? [];
   const [selected, setSelected] = useState<InstalledApp | null>(null);
   const [leftovers, setLeftovers] = useState<LeftoverFile[]>([]);
   const [selectedLeftovers, setSelectedLeftovers] = useState<Set<string>>(new Set());
@@ -38,9 +39,8 @@ export function Applications() {
   const actionTotal = cleanRunning ? total : progress?.total ?? 0;
 
   useEffect(() => {
-    GetLastAppsScan()
-      .then((list) => setApps(sortApps(list || [])))
-      .catch(() => {});
+    if (cachedApps !== null) return;
+    void ensureApps().then((list) => setApps(sortApps(list)));
   }, []);
 
   useEffect(() => {

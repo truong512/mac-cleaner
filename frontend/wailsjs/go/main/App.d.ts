@@ -30,6 +30,8 @@ export function GetLastAppsScan():Promise<Array<model.InstalledApp>>;
 
 export function GetLastBigFilesScan():Promise<Array<model.ScanItem>>;
 
+export function GetLastDiskMap():Promise<model.DiskMapSnapshot>;
+
 export function GetLastDuplicates():Promise<Array<model.DuplicateGroup>>;
 
 export function GetLastJunkScan():Promise<Array<model.ScanItem>>;

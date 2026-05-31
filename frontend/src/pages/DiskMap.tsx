@@ -13,10 +13,13 @@ import { ActionDock } from '../components/ActionDock';
 import { TrashButton } from '../components/TrashButton';
 import { useConfirmTrash } from '../hooks/useConfirmTrash';
 import { useOperationProgress } from '../hooks/useScanProgress';
+import { useScanCache } from '../context/ScanCacheContext';
+import { findDirNode } from '../utils/dirNode';
 
 export function DiskMap() {
-  const [root, setRoot] = useState('~');
-  const [tree, setTree] = useState<DirNode | null>(null);
+  const { disk, setDisk, setDiskCurrentPath, ensureDisk } = useScanCache();
+  const [root, setRoot] = useState(disk?.root ?? '~');
+  const tree = disk?.tree ?? null;
   const [current, setCurrent] = useState<DirNode | null>(null);
   const [topFiles, setTopFiles] = useState<DirNode[]>([]);
   const [error, setError] = useState('');
@@ -31,6 +34,16 @@ export function DiskMap() {
   const actionTotal = progress?.total ?? 0;
 
   useEffect(() => {
+    void ensureDisk();
+  }, []);
+
+  useEffect(() => {
+    if (!disk) return;
+    setRoot(disk.root);
+    setCurrent(findDirNode(disk.tree, disk.currentPath) ?? disk.tree);
+  }, [disk]);
+
+  useEffect(() => {
     if (current) {
       GetTopFiles(current.path, 15).then(setTopFiles).catch(() => setTopFiles([]));
     }
@@ -41,7 +54,7 @@ export function DiskMap() {
     setLoading(true);
     try {
       const result = await BuildDiskTree(root);
-      setTree(result);
+      setDisk({ root, tree: result, currentPath: result.path });
       setCurrent(result);
     } catch (e: any) {
       setError(e?.message || 'Failed to build disk map');
@@ -59,6 +72,7 @@ export function DiskMap() {
   }
 
   function drill(node: DirNode) {
+    setDiskCurrentPath(node.path);
     setCurrent(node);
   }
 
@@ -66,15 +80,9 @@ export function DiskMap() {
     if (!current || !tree) return;
     if (current.path === tree.path) return;
     const parentPath = current.path.split('/').slice(0, -1).join('/') || '/';
-    const findParent = (n: DirNode): DirNode | null => {
-      if (n.path === parentPath) return n;
-      for (const c of n.children || []) {
-        const found = findParent(c);
-        if (found) return found;
-      }
-      return null;
-    };
-    setCurrent(findParent(tree) || tree);
+    const parent = findDirNode(tree, parentPath) || tree;
+    setDiskCurrentPath(parent.path);
+    setCurrent(parent);
   }
 
   async function reveal(path: string) {
