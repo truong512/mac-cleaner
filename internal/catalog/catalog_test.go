@@ -14,8 +14,8 @@ func TestLoadCatalog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(c.Categories) < 10 {
-		t.Fatalf("expected at least 10 categories, got %d", len(c.Categories))
+	if len(c.Categories) < 40 {
+		t.Fatalf("expected at least 40 categories, got %d", len(c.Categories))
 	}
 }
 
@@ -56,6 +56,84 @@ func TestMatchCategory(t *testing.T) {
 	matched, ok := c.MatchCategory(oldFile, info)
 	if !ok || matched.ID != "test_cache" {
 		t.Fatalf("expected match for cache file, got ok=%v cat=%v", ok, matched)
+	}
+}
+
+func TestMatchCategoryGradleCache(t *testing.T) {
+	c, err := catalog.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dir := t.TempDir()
+	gradleRoot := filepath.Join(dir, ".gradle", "caches")
+	if err := os.MkdirAll(gradleRoot, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cacheFile := filepath.Join(gradleRoot, "modules-2", "files-2.1", "artifact.jar")
+	if err := os.MkdirAll(filepath.Dir(cacheFile), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(cacheFile, []byte("data"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	testCat := catalog.Category{
+		ID:    "gradle_cache",
+		Label: "Gradle Cache",
+		Risk:  "safe",
+		Paths: []string{gradleRoot},
+		Rules: []catalog.Rule{{Glob: "**/*", MinAgeDays: 0}},
+	}
+	c.Categories = append(c.Categories, testCat)
+
+	info, err := os.Stat(cacheFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	matched, ok := c.MatchCategory(cacheFile, info)
+	if !ok || matched.ID != "gradle_cache" {
+		t.Fatalf("expected gradle cache match, got ok=%v cat=%v", ok, matched)
+	}
+}
+
+func TestMatchCategoryAndroidStudioGlob(t *testing.T) {
+	c, err := catalog.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dir := t.TempDir()
+	googleCache := filepath.Join(dir, "Library", "Caches", "Google")
+	studioDir := filepath.Join(googleCache, "AndroidStudio2024.3")
+	if err := os.MkdirAll(studioDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cacheFile := filepath.Join(studioDir, "caches", "index.dat")
+	if err := os.MkdirAll(filepath.Dir(cacheFile), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(cacheFile, []byte("data"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_ = os.Chtimes(cacheFile, time.Now().Add(-8*24*time.Hour), time.Now().Add(-8*24*time.Hour))
+
+	testCat := catalog.Category{
+		ID:    "android_studio_cache",
+		Label: "Android Studio Cache",
+		Risk:  "safe",
+		Paths: []string{googleCache},
+		Rules: []catalog.Rule{{Glob: "AndroidStudio*/**/*", MinAgeDays: 7}},
+	}
+	c.Categories = []catalog.Category{testCat}
+
+	info, err := os.Stat(cacheFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	matched, ok := c.MatchCategory(cacheFile, info)
+	if !ok || matched.ID != "android_studio_cache" {
+		t.Fatalf("expected android studio cache match, got ok=%v cat=%v", ok, matched)
 	}
 }
 

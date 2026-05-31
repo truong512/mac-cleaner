@@ -43,6 +43,7 @@ categories:
     description: Temporary files in user temp directories
     paths:
       - "~/Library/Application Support/CrashReporter"
+      - "~/Library/Caches/TemporaryItems"
     rules:
       - glob: "**/*"
         min_age_days: 7
@@ -246,3 +247,238 @@ categories:
     rules:
       - glob: "**/*"
         min_age_days: 30
+
+  - id: quicklook_cache
+    label: Quick Look Cache
+    risk: safe
+    description: macOS Quick Look thumbnail cache
+    paths:
+      - "~/Library/Caches/com.apple.QuickLookDaemon"
+    rules:
+      - glob: "**/*"
+        min_age_days: 1
+
+  - id: help_cache
+    label: Help Viewer Cache
+    risk: safe
+    description: Cached macOS Help documentation
+    paths:
+      - "~/Library/Caches/com.apple.helpd"
+    rules:
+      - glob: "**/*"
+        min_age_days: 7
+
+  - id: software_update_cache
+    label: Software Update Cache
+    risk: safe
+    description: Cached macOS software update downloads
+    paths:
+      - "~/Library/Caches/com.apple.SoftwareUpdate"
+    rules:
+      - glob: "**/*"
+        min_age_days: 7
+
+  - id: gradle_cache
+    label: Gradle Cache
+    risk: safe
+    description: Gradle build and dependency cache
+    paths:
+      - "~/.gradle/caches"
+    rules:
+      - glob: "**/*"
+        min_age_days: 0
+
+  - id: cargo_cache
+    label: Cargo Cache
+    risk: safe
+    description: Rust Cargo registry and package cache
+    paths:
+      - "~/.cargo/registry/cache"
+      - "~/.cargo/git/checkouts"
+    rules:
+      - glob: "**/*"
+        min_age_days: 0
+
+  - id: pnpm_cache
+    label: pnpm Cache
+    risk: safe
+    description: pnpm package store cache
+    paths:
+      - "~/Library/Caches/pnpm"
+      - "~/Library/pnpm/store"
+    rules:
+      - glob: "**/*"
+        min_age_days: 0
+
+  - id: bun_cache
+    label: Bun Cache
+    risk: safe
+    description: Bun runtime install cache
+    paths:
+      - "~/.bun/install/cache"
+    rules:
+      - glob: "**/*"
+        min_age_days: 0
+
+  - id: composer_cache
+    label: Composer Cache
+    risk: safe
+    description: PHP Composer package cache
+    paths:
+      - "~/Library/Caches/composer"
+    rules:
+      - glob: "**/*"
+        min_age_days: 0
+
+  - id: cocoa_pods_cache
+    label: CocoaPods Cache
+    risk: moderate
+    description: CocoaPods spec and download cache (pods may re-download)
+    paths:
+      - "~/Library/Caches/CocoaPods"
+    rules:
+      - glob: "**/*"
+        min_age_days: 0
+
+  - id: jetbrains_cache
+    label: JetBrains IDE Cache
+    risk: safe
+    description: IntelliJ, WebStorm, PyCharm, and other JetBrains IDE caches
+    paths:
+      - "~/Library/Caches/JetBrains"
+    rules:
+      - glob: "**/*"
+        min_age_days: 1
+
+  - id: android_studio_cache
+    label: Android Studio Cache
+    risk: safe
+    description: Android Studio IDE cache and logs
+    paths:
+      - "~/Library/Caches/Google"
+      - "~/Library/Logs/Google"
+    rules:
+      - glob: "AndroidStudio*/**/*"
+        min_age_days: 7
+
+  - id: xcode_device_support
+    label: Xcode Device Support
+    risk: moderate
+    description: Old iOS device debug symbols (re-downloaded when device connects)
+    paths:
+      - "~/Library/Developer/Xcode/iOS DeviceSupport"
+    rules:
+      - glob: "**/*"
+        min_age_days: 90
+
+  - id: xcode_previews
+    label: Xcode Previews Cache
+    risk: moderate
+    description: SwiftUI preview and IB support cache
+    paths:
+      - "~/Library/Developer/Xcode/UserData/Previews"
+      - "~/Library/Developer/Xcode/UserData/IB Support"
+    rules:
+      - glob: "**/*"
+        min_age_days: 7
+
+  - id: edge_cache
+    label: Microsoft Edge Cache
+    risk: safe
+    description: Microsoft Edge browser cache
+    paths:
+      - "~/Library/Application Support/Microsoft Edge/Default/Cache"
+      - "~/Library/Application Support/Microsoft Edge/Default/Code Cache"
+    rules:
+      - glob: "**/*"
+        min_age_days: 1
+
+  - id: brave_cache
+    label: Brave Cache
+    risk: safe
+    description: Brave browser cache
+    paths:
+      - "~/Library/Application Support/BraveSoftware/Brave-Browser/Default/Cache"
+      - "~/Library/Application Support/BraveSoftware/Brave-Browser/Default/Code Cache"
+    rules:
+      - glob: "**/*"
+        min_age_days: 1
+
+  - id: arc_cache
+    label: Arc Browser Cache
+    risk: safe
+    description: Arc browser cache
+    paths:
+      - "~/Library/Application Support/Arc/User Data/Default/Cache"
+      - "~/Library/Application Support/Arc/User Data/Default/Code Cache"
+    rules:
+      - glob: "**/*"
+        min_age_days: 1
+
+  - id: discord_cache
+    label: Discord Cache
+    risk: safe
+    description: Discord application cache and media
+    paths:
+      - "~/Library/Application Support/discord/Cache"
+      - "~/Library/Application Support/discord/Code Cache"
+      - "~/Library/Application Support/discord/GPUCache"
+    rules:
+      - glob: "**/*"
+        min_age_days: 1
+
+  - id: zoom_cache
+    label: Zoom Cache
+    risk: safe
+    description: Zoom meeting client cache
+    paths:
+      - "~/Library/Caches/us.zoom.xos"
+      - "~/Library/Logs/zoom.us"
+    rules:
+      - glob: "**/*"
+        min_age_days: 7
+
+  - id: teams_cache
+    label: Microsoft Teams Cache
+    risk: safe
+    description: Microsoft Teams cache and logs
+    paths:
+      - "~/Library/Application Support/Microsoft/Teams/Cache"
+      - "~/Library/Application Support/Microsoft/Teams/Code Cache"
+      - "~/Library/Logs/Microsoft Teams"
+    rules:
+      - glob: "**/*"
+        min_age_days: 7
+
+  - id: telegram_cache
+    label: Telegram Cache
+    risk: safe
+    description: Telegram desktop cache and media temp files
+    paths:
+      - "~/Library/Group Containers/6N38VWS5BX.ru.keepcoder.Telegram/stable"
+    rules:
+      - glob: "account-*/postbox/media/**"
+        min_age_days: 7
+      - glob: "account-*/postbox/temp/**"
+        min_age_days: 7
+
+  - id: steam_cache
+    label: Steam Cache
+    risk: safe
+    description: Steam client download and shader cache
+    paths:
+      - "~/Library/Application Support/Steam/appcache"
+      - "~/Library/Application Support/Steam/htmlcache"
+    rules:
+      - glob: "**/*"
+        min_age_days: 7
+
+  - id: photos_analysis_cache
+    label: Photos Analysis Cache
+    risk: safe
+    description: macOS Photos ML analysis cache (rebuilt on next scan)
+    paths:
+      - "~/Library/Caches/com.apple.MediaAnalysis"
+    rules:
+      - glob: "**/*"
+        min_age_days: 7

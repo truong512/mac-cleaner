@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"sync/atomic"
 
 	"github.com/bmatcuk/doublestar/v4"
@@ -95,8 +96,9 @@ func Scan(ctx context.Context, opts Options, onProgress ProgressFunc) ([]model.S
 		Message: "Scanning for large and archive files...",
 	})
 
-	items := make([]model.ScanItem, 0)
+	items := make([]model.ScanItem, 0, 256)
 	seen := map[string]struct{}{}
+	var itemsMu sync.Mutex
 	var scanned atomic.Int64
 	rootCount := len(roots)
 	if rootCount == 0 {
@@ -170,12 +172,7 @@ func Scan(ctx context.Context, opts Options, onProgress ProgressFunc) ([]model.S
 				return nil
 			}
 
-			if _, ok := seen[path]; ok {
-				return nil
-			}
-			seen[path] = struct{}{}
-
-			items = append(items, model.ScanItem{
+			item := model.ScanItem{
 				ID:          category + ":" + path,
 				Path:        path,
 				Category:    category,
@@ -184,7 +181,15 @@ func Scan(ctx context.Context, opts Options, onProgress ProgressFunc) ([]model.S
 				Risk:        risk,
 				Description: fmt.Sprintf("%s (%s)", filepath.Base(path), formatSize(size)),
 				Selected:    false,
-			})
+			}
+			itemsMu.Lock()
+			if _, ok := seen[path]; ok {
+				itemsMu.Unlock()
+				return nil
+			}
+			seen[path] = struct{}{}
+			items = append(items, item)
+			itemsMu.Unlock()
 
 			n := scanned.Add(1)
 			if n%50 == 0 {

@@ -592,6 +592,19 @@ nav {
   align-items: flex-start;
 }
 
+.checkbox-row {
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.4;
+  color: #e5e7eb;
+  cursor: pointer;
+}
+
+.checkbox-row input[type='checkbox'] {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
 .file-meta {
   flex: 1;
   min-width: 0;
