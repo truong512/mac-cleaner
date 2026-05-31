@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
+import { EventsOn } from '../../wailsjs/runtime/runtime';
 import type { ScanProgress } from '../types';
 
 export type OperationKind = 'scan' | 'delete';
@@ -43,15 +43,16 @@ export function useOperationProgress() {
       setProgress(null);
     };
 
-    EventsOn('scan:progress', onScanProgress);
-    EventsOn('delete:progress', onDeleteProgress);
-    EventsOn('scan:cancelled', onScanCancelled);
-    EventsOn('delete:cancelled', onDeleteCancelled);
+    const offScan = EventsOn('scan:progress', onScanProgress);
+    const offDelete = EventsOn('delete:progress', onDeleteProgress);
+    const offScanCancelled = EventsOn('scan:cancelled', onScanCancelled);
+    const offDeleteCancelled = EventsOn('delete:cancelled', onDeleteCancelled);
+
     return () => {
-      EventsOff('scan:progress');
-      EventsOff('delete:progress');
-      EventsOff('scan:cancelled');
-      EventsOff('delete:cancelled');
+      offScan();
+      offDelete();
+      offScanCancelled();
+      offDeleteCancelled();
     };
   }, []);
 

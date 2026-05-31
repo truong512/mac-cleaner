@@ -9,16 +9,23 @@ const ROW_ESTIMATE_PX = 56;
 type Props = {
   items: ScanItem[];
   onToggle: (id: string) => void;
+  isSelected?: (id: string) => boolean;
 };
 
-export function VirtualScanFileList({ items, onToggle }: Props) {
+export function VirtualScanFileList({
+  items,
+  onToggle,
+  isSelected,
+}: Props) {
+  const rowSelected = isSelected ?? ((id: string) => items.find((i) => i.id === id)?.selected ?? false);
   const parentRef = useRef<HTMLDivElement>(null);
 
   const virtualizer = useVirtualizer({
     count: items.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => ROW_ESTIMATE_PX,
-    overscan: 10,
+    overscan: 8,
+    getItemKey: (index) => items[index]?.id ?? index,
   });
 
   if (!items.length) {
@@ -33,26 +40,33 @@ export function VirtualScanFileList({ items, onToggle }: Props) {
       >
         {virtualizer.getVirtualItems().map((virtualRow) => {
           const item = items[virtualRow.index];
+          if (!item) {
+            return null;
+          }
           return (
             <div
               key={item.id}
               data-index={virtualRow.index}
               ref={virtualizer.measureElement}
               className="virtual-file-row"
-              style={{ transform: `translateY(${virtualRow.start}px)` }}
+              style={{
+                transform: `translateY(${virtualRow.start}px)`,
+              }}
             >
               <label className="file-row">
                 <input
                   type="checkbox"
-                  checked={item.selected}
+                  checked={rowSelected(item.id)}
                   onChange={() => onToggle(item.id)}
                 />
                 <div className="file-meta">
-                  <span className="file-path">{item.path}</span>
+                  <span className="file-path" title={item.path}>
+                    {item.path}
+                  </span>
                   <span className="muted">{item.categoryLabel}</span>
                 </div>
                 <RiskBadge risk={item.risk} />
-                <span>{formatBytes(item.sizeBytes)}</span>
+                <span className="file-size">{formatBytes(item.sizeBytes)}</span>
               </label>
             </div>
           );

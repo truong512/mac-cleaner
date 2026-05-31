@@ -13,6 +13,7 @@ import {
   GetLastDiskMap,
   GetLastDuplicates,
   GetLastJunkScan,
+  SetDuplicateKeepers,
 } from '../../wailsjs/go/main/App';
 import type { DirNode, DuplicateGroup, InstalledApp, ScanItem } from '../types';
 
@@ -177,7 +178,9 @@ export function ScanCacheProvider({ children }: { children: ReactNode }) {
         .then((groups) => {
           duplicatesFetchedRef.current = true;
           const list = groups || [];
-          setDuplicatesState({ groups: list, keepers: keepersFromGroups(list) });
+          const keepers = keepersFromGroups(list);
+          setDuplicatesState({ groups: list, keepers });
+          SetDuplicateKeepers(keepers);
           return list;
         })
         .catch(() => {

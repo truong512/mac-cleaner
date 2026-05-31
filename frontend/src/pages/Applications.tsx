@@ -5,12 +5,13 @@ import {
   ScanApps,
   UninstallApp,
 } from '../../wailsjs/go/main/App';
-import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
+import { EventsOn } from '../../wailsjs/runtime/runtime';
 import type { CleanupReport, InstalledApp, LeftoverFile } from '../types';
 import { formatBytes } from '../utils/format';
 import { useConfirmTrash } from '../hooks/useConfirmTrash';
 import { TrashButton } from '../components/TrashButton';
 import { ActionDock } from '../components/ActionDock';
+import { CleanupReportBanner } from '../components/CleanupReportBanner';
 import { useTrashButton } from '../hooks/useTrashButton';
 import { useOperationProgress } from '../hooks/useScanProgress';
 import { useScanCache } from '../context/ScanCacheContext';
@@ -23,7 +24,7 @@ export function Applications() {
   const [selectedLeftovers, setSelectedLeftovers] = useState<Set<string>>(new Set());
   const [previewLoading, setPreviewLoading] = useState(false);
   const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
+  const [report, setReport] = useState<CleanupReport | null>(null);
   const [loading, setLoading] = useState(false);
   const { running, percent, scanned, total, runTrashAction, cancelTrashAction } = useTrashButton();
   const { progress, active, kind } = useOperationProgress();
@@ -44,15 +45,22 @@ export function Applications() {
   }, []);
 
   useEffect(() => {
-    const onDone = (report: CleanupReport) => {
-      setMessage(`Removed ${report.deleted} items (${report.failed} failed)`);
-      setSelected(null);
-      setLeftovers([]);
-      setSelectedLeftovers(new Set());
-      void runScan();
+    const onDone = (cleanupReport: CleanupReport) => {
+      setReport(cleanupReport);
+      if (cleanupReport.failed > 0) {
+        const first = cleanupReport.failures?.[0];
+        setError(first?.error || `Could not move ${cleanupReport.failed} item(s) to Trash`);
+      } else {
+        setError('');
+      }
+      if (cleanupReport.deleted > 0) {
+        setSelected(null);
+        setLeftovers([]);
+        setSelectedLeftovers(new Set());
+        void runScan();
+      }
     };
-    EventsOn('uninstall:done', onDone);
-    return () => EventsOff('uninstall:done');
+    return EventsOn('uninstall:done', onDone);
   }, []);
 
   function sortApps(list: InstalledApp[]) {
@@ -78,7 +86,7 @@ export function Applications() {
   async function selectApp(app: InstalledApp) {
     setSelected(app);
     setError('');
-    setMessage('');
+    setReport(null);
     setLeftovers([]);
     setSelectedLeftovers(new Set());
     setPreviewLoading(true);
@@ -120,8 +128,9 @@ export function Applications() {
         UninstallApp({
           appPath: selected.path,
           leftoverPaths: Array.from(selectedLeftovers),
-        }).catch((e: any) => {
-          setError(e?.message || 'Uninstall failed');
+        }).catch((e: unknown) => {
+          const msg = e instanceof Error ? e.message : 'Uninstall failed';
+          setError(msg);
         }),
       pathCount
     );
@@ -157,7 +166,7 @@ export function Applications() {
       </header>
 
       {error && <div className="alert alert-error">{error}</div>}
-      {message && <div className="alert alert-info">{message}</div>}
+      {report && <CleanupReportBanner report={report} onDismiss={() => setReport(null)} />}
 
       <div className="page-body">
         <div className="grid-2 grid-fill">

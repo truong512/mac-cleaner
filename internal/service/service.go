@@ -32,9 +32,12 @@ type Service struct {
 	cancelScan context.CancelFunc
 	settings   model.AppSettings
 
-	lastJunkItems    []model.ScanItem
+	lastJunkItems     []model.ScanItem
+	junkSel           junkSelectionCache
 	lastBigFilesItems []model.ScanItem
+	bigFilesSel       bigFilesSelectionCache
 	lastDupGroups    []model.DuplicateGroup
+	lastDupKeepers   map[string]string
 	lastApps         []model.InstalledApp
 	lastDiskTree     *model.DirNode
 	lastDiskRoot     string
@@ -108,6 +111,10 @@ func (s *Service) reportFromResults(results []model.DeleteResult) model.CleanupR
 		} else {
 			report.Failed++
 			report.FailedPaths = append(report.FailedPaths, r.Path)
+			report.Failures = append(report.Failures, model.CleanupFailure{
+				Path:  r.Path,
+				Error: r.Error,
+			})
 		}
 	}
 	return report
@@ -150,12 +157,19 @@ func (s *Service) ScanJunk() ([]model.ScanItem, error) {
 	}
 
 	items, err := s.scanEng.ScanJunk(ctx, onProgress)
-	if err != nil && ctx.Err() != nil {
-		return items, fmt.Errorf("scan cancelled")
+	if ctx.Err() != nil {
+		if len(items) == 0 {
+			return items, fmt.Errorf("scan cancelled")
+		}
+		err = nil
+	} else if err != nil && len(items) > 0 {
+		// Non-fatal walk errors (permissions, races with Trash) — keep partial results.
+		err = nil
 	}
 
 	s.mu.Lock()
 	s.lastJunkItems = items
+	s.rebuildJunkSelectionLocked()
 	s.mu.Unlock()
 
 	s.emit("scan:done", map[string]any{
@@ -200,6 +214,7 @@ func (s *Service) ScanBigFiles(req model.BigFilesScanRequest) ([]model.ScanItem,
 
 	s.mu.Lock()
 	s.lastBigFilesItems = items
+	s.rebuildBigFilesSelectionLocked()
 	s.mu.Unlock()
 
 	s.emit("scan:done", map[string]any{
@@ -279,10 +294,33 @@ func (s *Service) ExecuteCleanup(items []model.ScanItem) model.CleanupReport {
 }
 
 func (s *Service) ForceCleanup(items []model.ScanItem) {
+	paths, categories := selectedPathsAndCategories(items)
+	s.cleanupPathsAsync(paths, categories, "cleanup")
+}
+
+func (s *Service) CleanupPaths(paths []string, category string) {
+	s.cleanupPathsAsync(paths, nil, category)
+}
+
+func selectedPathsAndCategories(items []model.ScanItem) ([]string, map[string]string) {
+	paths := make([]string, 0)
+	categories := make(map[string]string)
+	for _, item := range items {
+		if !item.Selected {
+			continue
+		}
+		paths = append(paths, item.Path)
+		categories[item.Path] = item.Category
+	}
+	return paths, categories
+}
+
+func (s *Service) cleanupPathsAsync(paths []string, categories map[string]string, category string) {
 	go func() {
 		ctx, cancel := s.deleteCtx()
 		defer cancel()
-		report := s.deleteSvc.Execute(ctx, items, false, s.emitDeleteProgress)
+		results := s.deleteSvc.DeletePathsWithCategories(ctx, paths, category, categories, s.emitDeleteProgress)
+		report := s.reportFromResults(results)
 		if ctx.Err() != nil {
 			s.emit("delete:cancelled", map[string]string{"message": "Delete cancelled"})
 		}
@@ -394,6 +432,10 @@ func (s *Service) UninstallApp(sel model.UninstallSelection) error {
 		return fmt.Errorf("cannot uninstall system app: %s", target.Name)
 	}
 
+	if err := app.Quit(target.BundleID); err != nil {
+		return err
+	}
+
 	var agents []string
 	var other []string
 	for _, p := range sel.LeftoverPaths {
@@ -410,6 +452,20 @@ func (s *Service) UninstallApp(sel model.UninstallSelection) error {
 		_ = launchd.UnloadAgents(agents)
 		paths := append([]string{sel.AppPath}, other...)
 		paths = append(paths, agents...)
+
+		if len(paths) == 0 {
+			s.emit("uninstall:done", model.CleanupReport{DryRun: false})
+			return
+		}
+
+		total := len(paths)
+		s.emitDeleteProgress(model.ScanProgress{
+			Phase:   "deleting",
+			Scanned: 0,
+			Total:   int64(total),
+			Percent: 0,
+			Message: fmt.Sprintf("Moving to Trash (0 of %d)...", total),
+		})
 
 		ctx, cancel := s.deleteCtx()
 		defer cancel()
@@ -451,6 +507,7 @@ func (s *Service) ScanDuplicates(roots []string) ([]model.DuplicateGroup, error)
 
 	s.mu.Lock()
 	s.lastDupGroups = groups
+	s.lastDupKeepers = keepersFromDuplicateGroups(groups)
 	s.mu.Unlock()
 
 	s.emit("scan:done", map[string]any{
@@ -467,20 +524,23 @@ func (s *Service) GetLastDuplicates() []model.DuplicateGroup {
 }
 
 func (s *Service) DeleteDuplicates(req model.DuplicateDeleteRequest) {
-	go func() {
-		var paths []string
-		for _, g := range req.Groups {
-			paths = append(paths, duplicate.PathsToDelete(g)...)
-		}
-		ctx, cancel := s.deleteCtx()
-		defer cancel()
-		results := s.deleteSvc.DeletePaths(ctx, paths, "duplicates", s.emitDeleteProgress)
-		report := s.reportFromResults(results)
-		if ctx.Err() != nil {
-			s.emit("delete:cancelled", map[string]string{"message": "Delete cancelled"})
-		}
-		s.emit("cleanup:done", report)
-	}()
+	var paths []string
+	for _, g := range req.Groups {
+		paths = append(paths, duplicate.PathsToDelete(g)...)
+	}
+	s.cleanupPathsAsync(paths, nil, "duplicates")
+}
+
+func (s *Service) DeleteDuplicatePaths(paths []string) {
+	s.cleanupPathsAsync(paths, nil, "duplicates")
+}
+
+func keepersFromDuplicateGroups(groups []model.DuplicateGroup) map[string]string {
+	keepers := make(map[string]string, len(groups))
+	for _, g := range groups {
+		keepers[g.Hash] = g.Keeper
+	}
+	return keepers
 }
 
 func (s *Service) BuildDiskTree(root string) (*model.DirNode, error) {
@@ -552,6 +612,17 @@ func (s *Service) TrashPath(path string) model.DeleteResult {
 
 func (s *Service) GetAuditLogPath() string {
 	return s.deleteSvc.AuditLogPath()
+}
+
+func (s *Service) GetRecentAuditLog(maxLines int) ([]model.AuditLogEntry, error) {
+	if maxLines <= 0 {
+		maxLines = 100
+	}
+	return delete.ParseAuditEntries(maxLines)
+}
+
+func (s *Service) OpenAuditLog() error {
+	return delete.OpenAuditLog()
 }
 
 func (s *Service) RefreshPermissions() model.PermissionStatus {

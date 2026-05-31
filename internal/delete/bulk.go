@@ -27,6 +27,8 @@ func deleteWorkerCount() int {
 	return n
 }
 
+const pruneNestedThreshold = 5000
+
 // PrunePathsForDelete removes duplicates and paths nested under another deleted path.
 func PrunePathsForDelete(paths []string) []string {
 	if len(paths) <= 1 {
@@ -45,6 +47,9 @@ func PrunePathsForDelete(paths []string) []string {
 		seen[clean] = struct{}{}
 		unique = append(unique, clean)
 	}
+	if len(unique) > pruneNestedThreshold {
+		return unique
+	}
 	sort.Slice(unique, func(i, j int) bool {
 		if len(unique[i]) == len(unique[j]) {
 			return unique[i] < unique[j]
@@ -53,24 +58,31 @@ func PrunePathsForDelete(paths []string) []string {
 	})
 
 	kept := make([]string, 0, len(unique))
+	keptSet := make(map[string]struct{}, len(unique))
 	for _, p := range unique {
-		if pathHasAncestorInList(p, kept) {
+		if pathHasAncestorInSet(p, keptSet) {
 			continue
 		}
 		filtered := kept[:0]
 		for _, k := range kept {
 			if !isDescendantPath(k, p) {
 				filtered = append(filtered, k)
+			} else {
+				delete(keptSet, k)
 			}
 		}
 		kept = append(filtered, p)
+		keptSet[p] = struct{}{}
 	}
 	return kept
 }
 
-func pathHasAncestorInList(path string, ancestors []string) bool {
-	for _, a := range ancestors {
-		if isDescendantPath(path, a) {
+func pathHasAncestorInSet(path string, ancestors map[string]struct{}) bool {
+	for p := filepath.Dir(path); p != path; p = filepath.Dir(p) {
+		if p == "." || p == "/" {
+			break
+		}
+		if _, ok := ancestors[p]; ok {
 			return true
 		}
 	}
@@ -169,6 +181,10 @@ func (s *Service) deletePathsBulk(ctx context.Context, paths []string, defaultCa
 
 func (s *Service) DeletePaths(ctx context.Context, paths []string, category string, onProgress ProgressFunc) []model.DeleteResult {
 	return s.deletePathsBulk(ctx, paths, category, nil, onProgress)
+}
+
+func (s *Service) DeletePathsWithCategories(ctx context.Context, paths []string, category string, categories map[string]string, onProgress ProgressFunc) []model.DeleteResult {
+	return s.deletePathsBulk(ctx, paths, category, categories, onProgress)
 }
 
 func (s *Service) deleteItemsWithProgress(ctx context.Context, items []model.ScanItem, onProgress ProgressFunc) []model.DeleteResult {

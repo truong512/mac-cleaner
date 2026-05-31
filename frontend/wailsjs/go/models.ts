@@ -16,6 +16,26 @@ export namespace model {
 	        this.bigFilesMinBytes = source["bigFilesMinBytes"];
 	    }
 	}
+	export class AuditLogEntry {
+	    path: string;
+	    category: string;
+	    success: boolean;
+	    error?: string;
+	    timestamp: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AuditLogEntry(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.category = source["category"];
+	        this.success = source["success"];
+	        this.error = source["error"];
+	        this.timestamp = source["timestamp"];
+	    }
+	}
 	export class BigFilesScanRequest {
 	    roots: string[];
 	    minSizeBytes: number;
@@ -54,6 +74,20 @@ export namespace model {
 	        this.sizeBytes = source["sizeBytes"];
 	    }
 	}
+	export class CleanupFailure {
+	    path: string;
+	    error: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new CleanupFailure(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.error = source["error"];
+	    }
+	}
 	export class ScanItem {
 	    id: string;
 	    path: string;
@@ -88,6 +122,7 @@ export namespace model {
 	    deleted: number;
 	    failed: number;
 	    failedPaths?: string[];
+	    failures?: CleanupFailure[];
 	
 	    static createFrom(source: any = {}) {
 	        return new CleanupReport(source);
@@ -102,6 +137,7 @@ export namespace model {
 	        this.deleted = source["deleted"];
 	        this.failed = source["failed"];
 	        this.failedPaths = source["failedPaths"];
+	        this.failures = this.convertValues(source["failures"], CleanupFailure);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -299,6 +335,28 @@ export namespace model {
 	        this.systemApp = source["systemApp"];
 	    }
 	}
+	export class JunkCategoryRow {
+	    id: string;
+	    label: string;
+	    risk: string;
+	    itemCount: number;
+	    sizeBytes: number;
+	    allSelected: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new JunkCategoryRow(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.label = source["label"];
+	        this.risk = source["risk"];
+	        this.itemCount = source["itemCount"];
+	        this.sizeBytes = source["sizeBytes"];
+	        this.allSelected = source["allSelected"];
+	    }
+	}
 	export class LeftoverFile {
 	    path: string;
 	    sizeBytes: number;
@@ -362,6 +420,20 @@ export namespace model {
 	    }
 	}
 	
+	export class SelectionSummary {
+	    count: number;
+	    bytes: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new SelectionSummary(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.count = source["count"];
+	        this.bytes = source["bytes"];
+	    }
+	}
 	export class UninstallSelection {
 	    appPath: string;
 	    leftoverPaths: string[];

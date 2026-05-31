@@ -1,22 +1,74 @@
-import type { ScanItem } from '../types';
+import type { DuplicateGroup, ScanItem } from '../types';
 import { model } from '../types';
+
+/** Items marked for cleanup (avoids sending full scan results over Wails). */
+export function getSelectedItems(items: ScanItem[]): ScanItem[] {
+  const selected: ScanItem[] = [];
+  for (const item of items) {
+    if (item.selected) {
+      selected.push(item);
+    }
+  }
+  return selected;
+}
+
+/** Paths only — minimal payload for trash operations. */
+export function getSelectedIDs(items: ScanItem[]): string[] {
+  const ids: string[] = [];
+  for (const item of items) {
+    if (item.selected) {
+      ids.push(item.id);
+    }
+  }
+  return ids;
+}
+
+export function getSelectedPaths(items: ScanItem[]): string[] {
+  const paths: string[] = [];
+  for (const item of items) {
+    if (item.selected) {
+      paths.push(item.path);
+    }
+  }
+  return paths;
+}
+
+export function collectDuplicatePathsToDelete(
+  groups: DuplicateGroup[],
+  keepers: Record<string, string>
+): string[] {
+  const paths: string[] = [];
+  for (const g of groups) {
+    const keeper = keepers[g.hash] || g.keeper;
+    for (const p of g.paths || []) {
+      if (p !== keeper) {
+        paths.push(p);
+      }
+    }
+  }
+  return paths;
+}
 
 export type CategoryRow = model.CategorySummary & {
   allSelected: boolean;
 };
 
 /** Summarize categories and per-category selection in one pass. */
-export function buildCategoryRows(items: ScanItem[]): CategoryRow[] {
+export function buildCategoryRows(
+  items: ScanItem[],
+  selectedIds?: ReadonlySet<string>
+): CategoryRow[] {
   const map = new Map<
     string,
     model.CategorySummary & { selectedCount: number }
   >();
   for (const item of items) {
+    const selected = selectedIds ? selectedIds.has(item.id) : item.selected;
     const existing = map.get(item.category);
     if (existing) {
       existing.itemCount++;
       existing.sizeBytes += item.sizeBytes;
-      if (item.selected) {
+      if (selected) {
         existing.selectedCount++;
       }
     } else {
@@ -26,7 +78,7 @@ export function buildCategoryRows(items: ScanItem[]): CategoryRow[] {
         risk: item.risk,
         itemCount: 1,
         sizeBytes: item.sizeBytes,
-        selectedCount: item.selected ? 1 : 0,
+        selectedCount: selected ? 1 : 0,
       });
     }
   }
@@ -36,6 +88,66 @@ export function buildCategoryRows(items: ScanItem[]): CategoryRow[] {
       allSelected: cat.itemCount > 0 && selectedCount === cat.itemCount,
     }))
     .sort((a, b) => b.sizeBytes - a.sizeBytes);
+}
+
+export function selectedIdsFromItems(items: ScanItem[]): Set<string> {
+  const ids = new Set<string>();
+  for (const item of items) {
+    if (item.selected) {
+      ids.add(item.id);
+    }
+  }
+  return ids;
+}
+
+export function applyCategoryToSelectedIds(
+  items: ScanItem[],
+  selectedIds: Set<string>,
+  categoryId: string,
+  selected: boolean
+): Set<string> {
+  const next = new Set(selectedIds);
+  for (const item of items) {
+    if (item.category !== categoryId) {
+      continue;
+    }
+    if (selected) {
+      next.add(item.id);
+    } else {
+      next.delete(item.id);
+    }
+  }
+  return next;
+}
+
+export function safeOnlySelectedIds(items: ScanItem[]): Set<string> {
+  const next = new Set<string>();
+  for (const item of items) {
+    if (item.risk === 'safe') {
+      next.add(item.id);
+    }
+  }
+  return next;
+}
+
+export function archivesOnlySelectedIds(items: ScanItem[]): Set<string> {
+  const next = new Set<string>();
+  for (const item of items) {
+    if (item.category === 'archives') {
+      next.add(item.id);
+    }
+  }
+  return next;
+}
+
+export function bigFilesOnlySelectedIds(items: ScanItem[]): Set<string> {
+  const next = new Set<string>();
+  for (const item of items) {
+    if (item.category === 'big_files') {
+      next.add(item.id);
+    }
+  }
+  return next;
 }
 
 export function countSelection(items: ScanItem[]): {
