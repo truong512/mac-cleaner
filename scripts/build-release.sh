@@ -10,6 +10,22 @@ mkdir -p "$DIST"
 
 export PATH="$(go env GOPATH)/bin:${PATH:-}"
 
+echo "Building frontend..."
+(
+  cd "$ROOT/frontend"
+  if [[ -f package-lock.json ]]; then
+    npm ci
+  else
+    npm install
+  fi
+  npm run build
+)
+
+if [[ ! -d "$ROOT/frontend/dist" ]]; then
+  echo "error: frontend/dist missing after npm run build" >&2
+  exit 1
+fi
+
 build_dmg() {
   local arch="$1"
   echo "Building darwin/${arch}..."
