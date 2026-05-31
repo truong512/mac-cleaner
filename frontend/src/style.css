@@ -197,8 +197,46 @@ nav {
   top: 0;
   left: 0;
   width: 100%;
-  padding-bottom: 8px;
   box-sizing: border-box;
+}
+
+.virtual-file-list .file-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 8px 0;
+  margin: 0;
+  border-bottom: 1px solid #1f2937;
+  box-sizing: border-box;
+}
+
+.virtual-file-list .file-row input[type='checkbox'] {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.virtual-file-list .file-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.virtual-file-list .file-path {
+  display: block;
+  word-break: break-all;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.virtual-file-list .file-meta > .muted {
+  display: block;
+  margin-top: 2px;
+  line-height: 1.3;
+}
+
+.virtual-file-list .file-size {
+  flex-shrink: 0;
+  font-size: 13px;
+  padding-top: 2px;
 }
 
 .action-dock {
@@ -531,6 +569,58 @@ nav {
   margin-top: 20px;
 }
 
+.cleanup-report-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cleanup-log-dialog {
+  max-width: 640px;
+  max-height: min(80vh, 560px);
+  overflow-y: auto;
+}
+
+.cleanup-log-section {
+  margin: 16px 0 8px;
+  font-size: 13px;
+  color: #9ca3af;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cleanup-log-list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cleanup-log-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cleanup-log-list-compact .code-block {
+  font-size: 12px;
+}
+
+.cleanup-log-error {
+  color: #fca5a5;
+  font-size: 13px;
+}
+
+.cleanup-log-path {
+  margin-top: 12px;
+  word-break: break-all;
+}
+
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -571,6 +661,32 @@ nav {
 .field-row .input {
   flex: 1;
   min-width: 0;
+}
+
+.folder-paths-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.folder-paths-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.folder-paths-header .field-label {
+  margin-bottom: 0;
+}
+
+.folder-paths-hint {
+  margin: 0;
+}
+
+.folder-path-field .btn-sm {
+  flex-shrink: 0;
 }
 
 .alert {

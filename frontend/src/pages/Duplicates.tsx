@@ -1,32 +1,24 @@
-import { useDeferredValue, useEffect, useMemo, useState } from 'react';
-import { CancelScan, DeleteDuplicates, ScanDuplicates } from '../../wailsjs/go/main/App';
-import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  CancelScan,
+  CleanupLastDuplicates,
+  ScanDuplicates,
+  SetDuplicateKeepers,
+} from '../../wailsjs/go/main/App';
+import { EventsOn } from '../../wailsjs/runtime/runtime';
 import type { CleanupReport } from '../types';
 import { model } from '../types';
 import { formatBytes } from '../utils/format';
 import { useConfirmTrash } from '../hooks/useConfirmTrash';
 import { VirtualDuplicateGroupList } from '../components/VirtualDuplicateGroupList';
+import { CleanupReportBanner } from '../components/CleanupReportBanner';
+import { FolderPathsField } from '../components/FolderPathsField';
 import { ActionDock } from '../components/ActionDock';
 import { TrashButton } from '../components/TrashButton';
 import { useTrashButton } from '../hooks/useTrashButton';
 import { useOperationProgress } from '../hooks/useScanProgress';
 import { useScanCache } from '../context/ScanCacheContext';
-
-function buildDeleteRequest(
-  groups: model.DuplicateGroup[],
-  keepers: Record<string, string>
-): model.DuplicateDeleteRequest {
-  const payload = groups.map(
-    (g) =>
-      new model.DuplicateGroup({
-        hash: g.hash,
-        sizeBytes: g.sizeBytes,
-        paths: [...(g.paths || [])],
-        keeper: keepers[g.hash] || g.keeper,
-      })
-  );
-  return new model.DuplicateDeleteRequest({ groups: payload });
-}
+import { usePageActive } from '../hooks/usePageActive';
 
 function countExtras(groups: model.DuplicateGroup[], keepers: Record<string, string>): number {
   return groups.reduce((sum, g) => {
@@ -36,13 +28,14 @@ function countExtras(groups: model.DuplicateGroup[], keepers: Record<string, str
 }
 
 export function Duplicates() {
+  const pageActive = usePageActive();
   const { duplicates, setDuplicates, setDuplicateKeepers, ensureDuplicates } = useScanCache();
   const groups = duplicates?.groups ?? [];
   const deferredGroups = useDeferredValue(groups);
   const keepers = duplicates?.keepers ?? {};
   const [roots, setRoots] = useState('~/Documents\n~/Downloads\n~/Desktop');
   const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
+  const [report, setReport] = useState<CleanupReport | null>(null);
   const [loading, setLoading] = useState(false);
   const { running, percent, scanned, total, runTrashAction, cancelTrashAction } = useTrashButton();
   const { progress, active, kind } = useOperationProgress();
@@ -58,31 +51,34 @@ export function Duplicates() {
   const actionTotal = cleanRunning ? total : progress?.total ?? 0;
 
   const reclaimable = useMemo(() => {
+    if (!pageActive) return 0;
     return deferredGroups.reduce((sum, g) => {
       const keeper = keepers[g.hash] || g.keeper;
       const extras = (g.paths || []).filter((p: string) => p !== keeper).length;
       return sum + g.sizeBytes * extras;
     }, 0);
-  }, [deferredGroups, keepers]);
+  }, [deferredGroups, keepers, pageActive]);
 
-  const extraCount = useMemo(
-    () => countExtras(deferredGroups, keepers),
-    [deferredGroups, keepers]
-  );
+  const extraCountRef = useRef(0);
+  const extraCount = useMemo(() => {
+    if (!pageActive) {
+      return extraCountRef.current;
+    }
+    const n = countExtras(deferredGroups, keepers);
+    extraCountRef.current = n;
+    return n;
+  }, [deferredGroups, keepers, pageActive]);
 
   useEffect(() => {
     void ensureDuplicates();
   }, []);
 
   useEffect(() => {
-    const onDone = (report: CleanupReport) => {
-      setMessage(`Removed ${report.deleted} files (${report.failed} failed)`);
-      if (report.deleted > 0) {
-        void runScan();
-      }
+    const onDone = (cleanupReport: CleanupReport) => {
+      setReport(cleanupReport);
+      setError('');
     };
-    EventsOn('cleanup:done', onDone);
-    return () => EventsOff('cleanup:done');
+    return EventsOn('cleanup:done', onDone);
   }, []);
 
   async function runScan() {
@@ -94,7 +90,11 @@ export function Duplicates() {
         .map((r) => r.trim())
         .filter(Boolean);
       const result = await ScanDuplicates(rootList);
-      setDuplicates(result || []);
+      const list = result || [];
+      setDuplicates(list);
+      SetDuplicateKeepers(
+        Object.fromEntries(list.map((g) => [g.hash, g.keeper]))
+      );
     } catch (e: any) {
       setError(e?.message || 'Duplicate scan failed');
     } finally {
@@ -115,8 +115,9 @@ export function Duplicates() {
       return;
     }
     setError('');
-    setMessage('');
-    runTrashAction(() => DeleteDuplicates(buildDeleteRequest(groups, keepers)), extraCount);
+    setReport(null);
+    SetDuplicateKeepers(keepers);
+    runTrashAction(() => CleanupLastDuplicates(), extraCount);
   }
 
   function handlePrimaryAction() {
@@ -150,18 +151,10 @@ export function Duplicates() {
       </header>
 
       {error && <div className="alert alert-error">{error}</div>}
-      {message && <div className="alert alert-info">{message}</div>}
+      {report && <CleanupReportBanner report={report} onDismiss={() => setReport(null)} />}
 
       <div className="card">
-        <label>
-          <span className="field-label">Scan folders (one per line)</span>
-          <textarea
-            className="textarea"
-            rows={4}
-            value={roots}
-            onChange={(e) => setRoots(e.target.value)}
-          />
-        </label>
+        <FolderPathsField value={roots} onChange={setRoots} disabled={scanRunning} />
       </div>
 
       {groups.length > 0 && (
@@ -179,9 +172,11 @@ export function Duplicates() {
           <VirtualDuplicateGroupList
             groups={deferredGroups}
             keepers={keepers}
-            onSelectKeeper={(hash, path) =>
-              setDuplicateKeepers({ ...keepers, [hash]: path })
-            }
+            onSelectKeeper={(hash, path) => {
+              const next = { ...keepers, [hash]: path };
+              setDuplicateKeepers(next);
+              SetDuplicateKeepers(next);
+            }}
           />
         ) : (
           !loading && <p className="muted dup-empty">Press Scan to find duplicate files.</p>

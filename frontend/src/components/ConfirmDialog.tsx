@@ -20,7 +20,7 @@ export function ConfirmDialog({ summary, onConfirm, onCancel }: Props) {
       <div className="confirm-dialog card">
         <h3 id="confirm-title">Confirm cleanup</h3>
         <p>{summary}</p>
-        <p className="muted">Items will be moved to Trash.</p>
+        <p className="muted">The app bundle and selected files will be moved to Trash.</p>
         <div className="btn-row confirm-actions">
           <button type="button" className="btn btn-secondary" onClick={onCancel}>
             Cancel

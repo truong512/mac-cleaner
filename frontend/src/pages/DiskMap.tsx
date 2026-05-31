@@ -9,6 +9,7 @@ import {
 import type { DirNode } from '../types';
 import { formatBytes, basename } from '../utils/format';
 import { Treemap } from '../components/Treemap';
+import { FolderPathField } from '../components/FolderPathField';
 import { ActionDock } from '../components/ActionDock';
 import { TrashButton } from '../components/TrashButton';
 import { useConfirmTrash } from '../hooks/useConfirmTrash';
@@ -112,16 +113,11 @@ export function DiskMap() {
       {error && <div className="alert alert-error">{error}</div>}
 
       <div className="card">
-        <label className="field-row">
-          <span className="field-label">Root path</span>
-          <input
-            className="input"
-            value={root}
-            onChange={(e) => setRoot(e.target.value)}
-            placeholder="e.g. ~"
-            disabled={scanRunning}
-          />
-        </label>
+        <FolderPathField
+          value={root}
+          onChange={setRoot}
+          disabled={scanRunning}
+        />
       </div>
 
       {current && (

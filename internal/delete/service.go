@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sync"
 	"time"
 
 	"mac-cleaner/internal/model"
@@ -16,9 +15,16 @@ import (
 
 type ProgressFunc func(model.ScanProgress)
 
+type auditRecord struct {
+	path     string
+	category string
+	success  bool
+	err      error
+}
+
 type Service struct {
-	mu       sync.Mutex
 	auditLog *slog.Logger
+	auditCh  chan auditRecord
 }
 
 func NewService() *Service {
@@ -31,7 +37,27 @@ func NewService() *Service {
 	} else {
 		handler = slog.NewJSONHandler(f, &slog.HandlerOptions{AddSource: false})
 	}
-	return &Service{auditLog: slog.New(handler)}
+	s := &Service{
+		auditLog: slog.New(handler),
+		auditCh:  make(chan auditRecord, 4096),
+	}
+	go s.auditWorker()
+	return s
+}
+
+func (s *Service) auditWorker() {
+	for rec := range s.auditCh {
+		attrs := []any{
+			"path", rec.path,
+			"category", rec.category,
+			"success", rec.success,
+			"timestamp", time.Now().UTC().Format(time.RFC3339),
+		}
+		if rec.err != nil {
+			attrs = append(attrs, "error", rec.err.Error())
+		}
+		s.auditLog.Info("delete", attrs...)
+	}
 }
 
 func auditLogPath() string {
@@ -133,18 +159,12 @@ func (s *Service) deleteOne(path, category string) model.DeleteResult {
 }
 
 func (s *Service) logAudit(path, category string, success bool, err error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	attrs := []any{
-		"path", path,
-		"category", category,
-		"success", success,
-		"timestamp", time.Now().UTC().Format(time.RFC3339),
+	rec := auditRecord{path: path, category: category, success: success, err: err}
+	select {
+	case s.auditCh <- rec:
+	default:
+		s.auditLog.Info("delete", "path", path, "category", category, "success", success, "dropped", true)
 	}
-	if err != nil {
-		attrs = append(attrs, "error", err.Error())
-	}
-	s.auditLog.Info("delete", attrs...)
 }
 
 func (s *Service) buildReport(items []model.ScanItem, dryRun bool, results []model.DeleteResult) model.CleanupReport {
@@ -176,23 +196,79 @@ func (s *Service) buildReport(items []model.ScanItem, dryRun bool, results []mod
 		} else {
 			report.Failed++
 			report.FailedPaths = append(report.FailedPaths, r.Path)
+			report.Failures = append(report.Failures, model.CleanupFailure{
+				Path:  r.Path,
+				Error: r.Error,
+			})
 		}
 	}
 	return report
 }
 
 func MoveToTrash(path string) error {
-	if _, err := os.Stat(path); err != nil {
+	_, err := os.Lstat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
 		return err
 	}
 	return moveToTrashOS(path)
 }
 
 func RevealInFinder(path string) error {
-	if _, err := os.Stat(path); err != nil {
+	if _, err := os.Lstat(path); err != nil {
 		return err
 	}
 	return exec.Command("open", "-R", path).Run()
+}
+
+func OpenAuditLog() error {
+	path := auditLogPath()
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			f, createErr := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+			if createErr != nil {
+				return createErr
+			}
+			_ = f.Close()
+		} else {
+			return err
+		}
+	}
+	return exec.Command("open", path).Run()
+}
+
+func ParseAuditEntries(maxLines int) ([]model.AuditLogEntry, error) {
+	raw, err := ReadAuditTail(maxLines)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]model.AuditLogEntry, 0, len(raw))
+	for _, entry := range raw {
+		out = append(out, mapToAuditEntry(entry))
+	}
+	return out, nil
+}
+
+func mapToAuditEntry(m map[string]any) model.AuditLogEntry {
+	e := model.AuditLogEntry{}
+	if v, ok := m["path"].(string); ok {
+		e.Path = v
+	}
+	if v, ok := m["category"].(string); ok {
+		e.Category = v
+	}
+	if v, ok := m["success"].(bool); ok {
+		e.Success = v
+	}
+	if v, ok := m["error"].(string); ok {
+		e.Error = v
+	}
+	if v, ok := m["timestamp"].(string); ok {
+		e.Timestamp = v
+	}
+	return e
 }
 
 func ReadAuditTail(lines int) ([]map[string]any, error) {

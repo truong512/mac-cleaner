@@ -2,6 +2,7 @@ package delete_test
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -26,8 +27,26 @@ func TestPreview(t *testing.T) {
 
 func TestMoveToTrashMissing(t *testing.T) {
 	err := delete.MoveToTrash(filepath.Join(t.TempDir(), "missing"))
-	if err == nil {
-		t.Fatal("expected error for missing file")
+	if err != nil {
+		t.Fatalf("missing path should be treated as already removed: %v", err)
+	}
+}
+
+func TestMoveToTrashBrokenSymlink(t *testing.T) {
+	dir := t.TempDir()
+	link := filepath.Join(dir, "broken-link")
+	if err := os.Symlink(filepath.Join(dir, "nonexistent-target"), link); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(link); err == nil {
+		t.Fatal("expected stat through broken symlink to fail")
+	}
+	if _, err := os.Lstat(link); err != nil {
+		t.Fatalf("lstat on broken symlink: %v", err)
+	}
+	// Trash may require Finder integration; ensure we at least pass the existence check.
+	if err := delete.MoveToTrash(link); err != nil {
+		t.Fatalf("broken symlink should be trashable: %v", err)
 	}
 }
 

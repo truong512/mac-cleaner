@@ -1,26 +1,35 @@
-import { startTransition, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { startTransition, useDeferredValue, useEffect, useState } from 'react';
 import {
   CancelScan,
-  ExecuteCleanup,
-  ForceCleanup,
+  CleanupLastBigFiles,
+  GetBigFilesCategoryRows,
   GetBigFilesDefaults,
-  PreviewCleanup,
+  GetLastBigFilesScan,
+  PreviewLastBigFiles,
   ScanBigFiles,
+  SelectBigFilesArchivesOnly,
+  SelectBigFilesLargeOnly,
+  SetBigFilesCategorySelected,
+  SetBigFilesItemSelected,
 } from '../../wailsjs/go/main/App';
-import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
+import { EventsOn } from '../../wailsjs/runtime/runtime';
 import type { CleanupReport } from '../types';
 import { model } from '../types';
 import { formatBytes } from '../utils/format';
 import {
+  applyCategoryToSelectedIds,
+  archivesOnlySelectedIds,
+  bigFilesOnlySelectedIds,
   buildCategoryRows,
-  countSelection,
-  selectArchivesOnly,
-  selectBigFilesOnly,
-  toggleCategorySelection,
+  type CategoryRow,
 } from '../utils/scanItems';
+import { usePageActive } from '../hooks/usePageActive';
+import { useBigFilesScanSelection } from '../hooks/useBigFilesScanSelection';
 import { useConfirmTrash } from '../hooks/useConfirmTrash';
 import { RiskBadge } from '../components/RiskBadge';
 import { VirtualScanFileList } from '../components/VirtualScanFileList';
+import { CleanupReportBanner } from '../components/CleanupReportBanner';
+import { FolderPathsField } from '../components/FolderPathsField';
 import { ActionDock } from '../components/ActionDock';
 import { TrashButton } from '../components/TrashButton';
 import { useTrashButton } from '../hooks/useTrashButton';
@@ -28,14 +37,17 @@ import { useOperationProgress } from '../hooks/useScanProgress';
 import { useScanCache } from '../context/ScanCacheContext';
 
 const MB = 1024 * 1024;
+const LARGE_SCAN = 5000;
 
 export function BigFiles() {
+  const pageActive = usePageActive();
   const { bigFiles, setBigFiles, ensureBigFiles } = useScanCache();
   const items = bigFiles ?? [];
   const deferredItems = useDeferredValue(items);
   const [report, setReport] = useState<CleanupReport | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [listGeneration, setListGeneration] = useState(0);
   const [roots, setRoots] = useState('~/Documents\n~/Downloads\n~/Desktop');
   const [minSizeMB, setMinSizeMB] = useState(50);
   const [includeBigFiles, setIncludeBigFiles] = useState(true);
@@ -43,6 +55,16 @@ export function BigFiles() {
   const { running, percent, scanned, total, runTrashAction, cancelTrashAction } = useTrashButton();
   const { progress, active, kind } = useOperationProgress();
   const { requestConfirm, confirmDialog } = useConfirmTrash();
+
+  const {
+    selectedIds,
+    setSelectedIds,
+    isSelected,
+    selectionRev,
+    bump,
+    selectedCount,
+    selectedBytes,
+  } = useBigFilesScanSelection(items, pageActive);
 
   const hasResults = items.length > 0;
   const scanRunning = loading || (active && kind === 'scan');
@@ -73,22 +95,43 @@ export function BigFiles() {
   }, []);
 
   useEffect(() => {
-    const onDone = (report: CleanupReport) => {
-      setReport(report);
-      if (report.deleted > 0) {
-        runScan();
+    const onDone = (cleanupReport: CleanupReport) => {
+      setReport(cleanupReport);
+      setError('');
+      if (cleanupReport.deleted > 0) {
+        void GetLastBigFilesScan().then((fresh) => {
+          setBigFiles(fresh || []);
+          setListGeneration((g) => g + 1);
+        });
       }
     };
-    EventsOn('cleanup:done', onDone);
-    return () => EventsOff('cleanup:done');
+    return EventsOn('cleanup:done', onDone);
   }, []);
 
-  const categories = useMemo(() => buildCategoryRows(deferredItems), [deferredItems]);
-
-  const { selectedCount, selectedBytes } = useMemo(
-    () => countSelection(items),
-    [items]
-  );
+  const [categories, setCategories] = useState<CategoryRow[]>([]);
+  useEffect(() => {
+    if (!pageActive) return;
+    if (items.length > LARGE_SCAN) {
+      void GetBigFilesCategoryRows().then((rows) => {
+        startTransition(() => {
+          setCategories(
+            rows.map((r) => ({
+              id: r.id,
+              label: r.label,
+              risk: r.risk,
+              itemCount: r.itemCount,
+              sizeBytes: r.sizeBytes,
+              allSelected: r.allSelected,
+            }))
+          );
+        });
+      });
+      return;
+    }
+    startTransition(() => {
+      setCategories(buildCategoryRows(items, selectedIds));
+    });
+  }, [pageActive, items, selectedIds, selectionRev, listGeneration]);
 
   function buildRequest(): model.BigFilesScanRequest {
     const rootList = roots
@@ -109,6 +152,7 @@ export function BigFiles() {
     try {
       const result = await ScanBigFiles(buildRequest());
       setBigFiles(result || []);
+      setListGeneration((g) => g + 1);
       setReport(null);
     } catch (e: any) {
       setError(e?.message || 'Scan failed');
@@ -118,7 +162,7 @@ export function BigFiles() {
   }
 
   async function preview() {
-    const r = await PreviewCleanup(items);
+    const r = await PreviewLastBigFiles();
     setReport(r);
   }
 
@@ -131,7 +175,7 @@ export function BigFiles() {
     ) {
       return;
     }
-    runTrashAction(() => ForceCleanup(items), selectedCount);
+    runTrashAction(() => CleanupLastBigFiles(), selectedCount);
   }
 
   function handlePrimaryAction() {
@@ -148,27 +192,35 @@ export function BigFiles() {
   }
 
   function selectArchives() {
-    startTransition(() => {
-      setBigFiles((prev) => selectArchivesOnly(prev));
-    });
+    SelectBigFilesArchivesOnly();
+    setSelectedIds(archivesOnlySelectedIds(items));
+    bump();
   }
 
   function selectBigFiles() {
-    startTransition(() => {
-      setBigFiles((prev) => selectBigFilesOnly(prev));
-    });
+    SelectBigFilesLargeOnly();
+    setSelectedIds(bigFilesOnlySelectedIds(items));
+    bump();
   }
 
   function toggleCat(catId: string, selected: boolean) {
-    startTransition(() => {
-      setBigFiles((prev) => toggleCategorySelection(prev, catId, selected));
-    });
+    SetBigFilesCategorySelected(catId, selected);
+    setSelectedIds((prev) => applyCategoryToSelectedIds(items, prev, catId, selected));
+    bump();
   }
 
   function toggleItem(id: string) {
-    setBigFiles((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, selected: !i.selected } : i))
-    );
+    const next = !isSelected(id);
+    setSelectedIds((prev) => {
+      const s = new Set(prev);
+      if (next) {
+        s.add(id);
+      } else {
+        s.delete(id);
+      }
+      return s;
+    });
+    SetBigFilesItemSelected(id, next);
   }
 
   const actionDisabled =
@@ -196,15 +248,11 @@ export function BigFiles() {
 
       <div className="card">
         <div className="grid-2">
-          <label>
-            <span className="field-label">Scan folders (one per line)</span>
-            <textarea
-              className="textarea"
-              rows={4}
-              value={roots}
-              onChange={(e) => setRoots(e.target.value)}
-            />
-          </label>
+          <FolderPathsField
+            value={roots}
+            onChange={setRoots}
+            disabled={scanRunning}
+          />
           <div>
             <label style={{ display: 'block', marginBottom: 12 }}>
               <span className="field-label">Minimum file size (MB)</span>
@@ -249,22 +297,14 @@ export function BigFiles() {
             <button className="btn btn-secondary" onClick={selectBigFiles} disabled={!items.length}>
               Select Large Files
             </button>
-            <button className="btn btn-secondary" onClick={preview}>
-              Preview
-            </button>
-            <button className="btn btn-secondary" onClick={() => ExecuteCleanup(items).then(setReport)}>
+            <button className="btn btn-secondary" onClick={() => void preview()}>
               Dry Run Clean
             </button>
           </div>
         </div>
       )}
 
-      {report && (
-        <div className="alert alert-info">
-          {report.dryRun ? 'Dry run' : 'Cleanup'}: {report.deleted} deleted, {report.failed}{' '}
-          failed · {formatBytes(report.totalBytes)} processed
-        </div>
-      )}
+      {report && <CleanupReportBanner report={report} onDismiss={() => setReport(null)} />}
 
       <div className="page-body">
         <div className="grid-2 grid-fill">
@@ -292,7 +332,12 @@ export function BigFiles() {
 
           <div className="card card-scroll">
             <h3>Files{items.length > 0 ? ` (${items.length})` : ''}</h3>
-            <VirtualScanFileList items={deferredItems} onToggle={toggleItem} />
+            <VirtualScanFileList
+              key={listGeneration}
+              items={deferredItems}
+              isSelected={isSelected}
+              onToggle={toggleItem}
+            />
           </div>
         </div>
       </div>

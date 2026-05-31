@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
+import { EventsOn } from '../../wailsjs/runtime/runtime';
 import { CancelOperation } from '../../wailsjs/go/main/App';
+import type { ScanProgress } from '../types';
 import { useOperationProgress } from './useScanProgress';
 
 export function useTrashButton() {
@@ -8,21 +9,32 @@ export function useTrashButton() {
   const [pending, setPending] = useState(false);
   const [expectedTotal, setExpectedTotal] = useState(0);
 
+  const clearPending = useCallback(() => {
+    setPending(false);
+    setExpectedTotal(0);
+  }, []);
+
   useEffect(() => {
-    const finish = () => {
-      setPending(false);
-      setExpectedTotal(0);
+    const finish = () => clearPending();
+
+    const onDeleteProgress = (data: ScanProgress) => {
+      if (data.phase === 'done' || data.phase === 'cancelled') {
+        clearPending();
+      }
     };
 
-    EventsOn('cleanup:done', finish);
-    EventsOn('uninstall:done', finish);
-    EventsOn('delete:cancelled', finish);
+    const offCleanup = EventsOn('cleanup:done', finish);
+    const offUninstall = EventsOn('uninstall:done', finish);
+    const offCancelled = EventsOn('delete:cancelled', finish);
+    const offProgress = EventsOn('delete:progress', onDeleteProgress);
+
     return () => {
-      EventsOff('cleanup:done');
-      EventsOff('uninstall:done');
-      EventsOff('delete:cancelled');
+      offCleanup();
+      offUninstall();
+      offCancelled();
+      offProgress();
     };
-  }, []);
+  }, [clearPending]);
 
   const running = pending || (active && kind === 'delete');
   const percent = running ? Math.min(100, Math.max(0, progress?.percent ?? 0)) : 0;
@@ -35,17 +47,13 @@ export function useTrashButton() {
     try {
       const result = action();
       if (result instanceof Promise) {
-        void result.catch(() => {
-          setPending(false);
-          setExpectedTotal(0);
-        });
+        void result.catch(() => clearPending());
       }
     } catch (e) {
-      setPending(false);
-      setExpectedTotal(0);
+      clearPending();
       throw e;
     }
-  }, []);
+  }, [clearPending]);
 
   const cancelTrashAction = useCallback(() => {
     CancelOperation();

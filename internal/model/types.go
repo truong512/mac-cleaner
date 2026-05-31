@@ -28,6 +28,25 @@ type CategorySummary struct {
 	SizeBytes int64  `json:"sizeBytes"`
 }
 
+type JunkCategoryRow struct {
+	ID          string `json:"id"`
+	Label       string `json:"label"`
+	Risk        Risk   `json:"risk"`
+	ItemCount   int    `json:"itemCount"`
+	SizeBytes   int64  `json:"sizeBytes"`
+	AllSelected bool   `json:"allSelected"`
+}
+
+type CleanupFailure struct {
+	Path  string `json:"path"`
+	Error string `json:"error"`
+}
+
+type SelectionSummary struct {
+	Count int   `json:"count"`
+	Bytes int64 `json:"bytes"`
+}
+
 type CleanupReport struct {
 	DryRun      bool              `json:"dryRun"`
 	Items       []ScanItem        `json:"items"`
@@ -36,6 +55,15 @@ type CleanupReport struct {
 	Deleted     int               `json:"deleted"`
 	Failed      int               `json:"failed"`
 	FailedPaths []string          `json:"failedPaths,omitempty"`
+	Failures    []CleanupFailure  `json:"failures,omitempty"`
+}
+
+type AuditLogEntry struct {
+	Path      string `json:"path"`
+	Category  string `json:"category"`
+	Success   bool   `json:"success"`
+	Error     string `json:"error,omitempty"`
+	Timestamp string `json:"timestamp"`
 }
 
 type InstalledApp struct {

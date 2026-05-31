@@ -1,4 +1,6 @@
-import { useRef, type ReactNode } from 'react';
+import { createContext, useRef, type ReactNode } from 'react';
+
+export const PageActiveContext = createContext(true);
 
 type Props = {
   active: boolean;
@@ -18,8 +20,10 @@ export function KeepAlivePage({ active, children }: Props) {
   }
 
   return (
-    <div className="keep-alive-page" hidden={!active}>
-      {children}
-    </div>
+    <PageActiveContext.Provider value={active}>
+      <div className="keep-alive-page" hidden={!active}>
+        {children}
+      </div>
+    </PageActiveContext.Provider>
   );
 }

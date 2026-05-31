@@ -1,39 +1,61 @@
-import { startTransition, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { startTransition, useDeferredValue, useEffect, useState } from 'react';
 import {
   CancelScan,
-  ExecuteCleanup,
-  ForceCleanup,
-  PreviewCleanup,
+  CleanupLastJunk,
+  GetJunkCategoryRows,
+  GetLastJunkScan,
+  PreviewLastJunk,
   ScanJunk,
+  SelectJunkSafeOnly,
+  SetJunkCategorySelected,
+  SetJunkItemSelected,
 } from '../../wailsjs/go/main/App';
-import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
+import { EventsOn } from '../../wailsjs/runtime/runtime';
 import type { CleanupReport } from '../types';
 import { formatBytes } from '../utils/format';
 import {
+  applyCategoryToSelectedIds,
   buildCategoryRows,
-  countSelection,
-  selectSafeOnly,
-  toggleCategorySelection,
+  safeOnlySelectedIds,
+  type CategoryRow,
 } from '../utils/scanItems';
+import { usePageActive } from '../hooks/usePageActive';
+import { useJunkScanSelection } from '../hooks/useJunkScanSelection';
 import { useConfirmTrash } from '../hooks/useConfirmTrash';
 import { RiskBadge } from '../components/RiskBadge';
 import { VirtualScanFileList } from '../components/VirtualScanFileList';
+import { CleanupReportBanner } from '../components/CleanupReportBanner';
 import { ActionDock } from '../components/ActionDock';
 import { TrashButton } from '../components/TrashButton';
 import { useTrashButton } from '../hooks/useTrashButton';
 import { useOperationProgress } from '../hooks/useScanProgress';
 import { useScanCache } from '../context/ScanCacheContext';
 
+const LARGE_SCAN = 5000;
+
 export function JunkScan() {
+  const pageActive = usePageActive();
   const { junk, setJunk, ensureJunk } = useScanCache();
   const items = junk ?? [];
   const deferredItems = useDeferredValue(items);
   const [report, setReport] = useState<CleanupReport | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  /** Remount virtual list when scan results are replaced (fixes row overlap after cleanup). */
+  const [listGeneration, setListGeneration] = useState(0);
   const { running, percent, scanned, total, runTrashAction, cancelTrashAction } = useTrashButton();
   const { progress, active, kind } = useOperationProgress();
   const { requestConfirm, confirmDialog } = useConfirmTrash();
+
+  const {
+    selectedIds,
+    setSelectedIds,
+    isSelected,
+    selectionRev,
+    bump,
+    selectedCount,
+    selectedBytes,
+  } = useJunkScanSelection(items, pageActive);
 
   const hasResults = items.length > 0;
   const scanRunning = loading || (active && kind === 'scan');
@@ -49,22 +71,43 @@ export function JunkScan() {
   }, []);
 
   useEffect(() => {
-    const onDone = (report: CleanupReport) => {
-      setReport(report);
-      if (report.deleted > 0) {
-        runScan();
+    const onDone = (cleanupReport: CleanupReport) => {
+      setReport(cleanupReport);
+      setError('');
+      if (cleanupReport.deleted > 0) {
+        void GetLastJunkScan().then((fresh) => {
+          setJunk(fresh || []);
+          setListGeneration((g) => g + 1);
+        });
       }
     };
-    EventsOn('cleanup:done', onDone);
-    return () => EventsOff('cleanup:done');
+    return EventsOn('cleanup:done', onDone);
   }, []);
 
-  const categories = useMemo(() => buildCategoryRows(deferredItems), [deferredItems]);
-
-  const { selectedCount, selectedBytes } = useMemo(
-    () => countSelection(items),
-    [items]
-  );
+  const [categories, setCategories] = useState<CategoryRow[]>([]);
+  useEffect(() => {
+    if (!pageActive) return;
+    if (items.length > LARGE_SCAN) {
+      void GetJunkCategoryRows().then((rows) => {
+        startTransition(() => {
+          setCategories(
+            rows.map((r) => ({
+              id: r.id,
+              label: r.label,
+              risk: r.risk,
+              itemCount: r.itemCount,
+              sizeBytes: r.sizeBytes,
+              allSelected: r.allSelected,
+            }))
+          );
+        });
+      });
+      return;
+    }
+    startTransition(() => {
+      setCategories(buildCategoryRows(items, selectedIds));
+    });
+  }, [pageActive, items, selectionRev, selectedIds]);
 
   async function runScan() {
     setError('');
@@ -72,6 +115,7 @@ export function JunkScan() {
     try {
       const result = await ScanJunk();
       setJunk(result || []);
+      setListGeneration((g) => g + 1);
       setReport(null);
     } catch (e: any) {
       setError(e?.message || 'Scan failed');
@@ -81,7 +125,7 @@ export function JunkScan() {
   }
 
   async function preview() {
-    const r = await PreviewCleanup(items);
+    const r = await PreviewLastJunk();
     setReport(r);
   }
 
@@ -94,7 +138,7 @@ export function JunkScan() {
     ) {
       return;
     }
-    runTrashAction(() => ForceCleanup(items), selectedCount);
+    runTrashAction(() => CleanupLastJunk(), selectedCount);
   }
 
   function handlePrimaryAction() {
@@ -111,21 +155,30 @@ export function JunkScan() {
   }
 
   function selectSafe() {
-    startTransition(() => {
-      setJunk((prev) => selectSafeOnly(prev));
-    });
+    SelectJunkSafeOnly();
+    setSelectedIds(safeOnlySelectedIds(items));
+    bump();
   }
 
   function toggleCat(catId: string, selected: boolean) {
-    startTransition(() => {
-      setJunk((prev) => toggleCategorySelection(prev, catId, selected));
-    });
+    SetJunkCategorySelected(catId, selected);
+    setSelectedIds((prev) => applyCategoryToSelectedIds(items, prev, catId, selected));
+    bump();
   }
 
   function toggleItem(id: string) {
-    setJunk((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, selected: !i.selected } : i))
-    );
+    const next = !isSelected(id);
+    setSelectedIds((prev) => {
+      const s = new Set(prev);
+      if (next) {
+        s.add(id);
+      } else {
+        s.delete(id);
+      }
+      return s;
+    });
+    SetJunkItemSelected(id, next);
+    bump();
   }
 
   const actionDisabled =
@@ -163,22 +216,14 @@ export function JunkScan() {
             {formatBytes(selectedBytes)} to reclaim
           </span>
           <div className="btn-row">
-            <button className="btn btn-secondary" onClick={preview}>
-              Preview
-            </button>
-            <button className="btn btn-secondary" onClick={() => ExecuteCleanup(items).then(setReport)}>
+            <button className="btn btn-secondary" onClick={() => void preview()}>
               Dry Run Clean
             </button>
           </div>
         </div>
       )}
 
-      {report && (
-        <div className="alert alert-info">
-          {report.dryRun ? 'Dry run' : 'Cleanup'}: {report.deleted} deleted, {report.failed}{' '}
-          failed · {formatBytes(report.totalBytes)} processed
-        </div>
-      )}
+      {report && <CleanupReportBanner report={report} onDismiss={() => setReport(null)} />}
 
       <div className="page-body">
         <div className="grid-2 grid-fill">
@@ -206,7 +251,12 @@ export function JunkScan() {
 
           <div className="card card-scroll">
             <h3>Files{items.length > 0 ? ` (${items.length})` : ''}</h3>
-            <VirtualScanFileList items={deferredItems} onToggle={toggleItem} />
+            <VirtualScanFileList
+              key={listGeneration}
+              items={deferredItems}
+              isSelected={isSelected}
+              onToggle={toggleItem}
+            />
           </div>
         </div>
       </div>

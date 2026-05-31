@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 
+	"mac-cleaner/internal/dialog"
 	"mac-cleaner/internal/model"
 	"mac-cleaner/internal/service"
 )
@@ -93,6 +94,90 @@ func (a *App) ForceCleanup(items []model.ScanItem) {
 	a.svc.ForceCleanup(items)
 }
 
+func (a *App) CleanupPaths(paths []string, category string) {
+	a.svc.CleanupPaths(paths, category)
+}
+
+func (a *App) DeleteDuplicatePaths(paths []string) {
+	a.svc.DeleteDuplicatePaths(paths)
+}
+
+func (a *App) ApplyJunkSelectedIDs(ids []string) {
+	a.svc.ApplyJunkSelectedIDs(ids)
+}
+
+func (a *App) SetJunkItemSelected(id string, selected bool) {
+	a.svc.SetJunkItemSelected(id, selected)
+}
+
+func (a *App) SetJunkCategorySelected(categoryID string, selected bool) {
+	a.svc.SetJunkCategorySelected(categoryID, selected)
+}
+
+func (a *App) SelectJunkSafeOnly() {
+	a.svc.SelectJunkSafeOnly()
+}
+
+func (a *App) GetJunkSelectionSummary() model.SelectionSummary {
+	return a.svc.GetJunkSelectionSummary()
+}
+
+func (a *App) GetJunkCategoryRows() []model.JunkCategoryRow {
+	return a.svc.GetJunkCategoryRows()
+}
+
+func (a *App) CleanupLastJunk() {
+	a.svc.CleanupLastJunk()
+}
+
+func (a *App) PreviewLastJunk() model.CleanupReport {
+	return a.svc.PreviewLastJunk()
+}
+
+func (a *App) ApplyBigFilesSelectedIDs(ids []string) {
+	a.svc.ApplyBigFilesSelectedIDs(ids)
+}
+
+func (a *App) SetBigFilesItemSelected(id string, selected bool) {
+	a.svc.SetBigFilesItemSelected(id, selected)
+}
+
+func (a *App) SetBigFilesCategorySelected(categoryID string, selected bool) {
+	a.svc.SetBigFilesCategorySelected(categoryID, selected)
+}
+
+func (a *App) SelectBigFilesArchivesOnly() {
+	a.svc.SelectBigFilesArchivesOnly()
+}
+
+func (a *App) SelectBigFilesLargeOnly() {
+	a.svc.SelectBigFilesLargeOnly()
+}
+
+func (a *App) GetBigFilesSelectionSummary() model.SelectionSummary {
+	return a.svc.GetBigFilesSelectionSummary()
+}
+
+func (a *App) GetBigFilesCategoryRows() []model.JunkCategoryRow {
+	return a.svc.GetBigFilesCategoryRows()
+}
+
+func (a *App) CleanupLastBigFiles() {
+	a.svc.CleanupLastBigFiles()
+}
+
+func (a *App) PreviewLastBigFiles() model.CleanupReport {
+	return a.svc.PreviewLastBigFiles()
+}
+
+func (a *App) SetDuplicateKeepers(keepers map[string]string) {
+	a.svc.SetDuplicateKeepers(keepers)
+}
+
+func (a *App) CleanupLastDuplicates() {
+	a.svc.CleanupLastDuplicates()
+}
+
 func (a *App) SelectSafeOnly(items []model.ScanItem) []model.ScanItem {
 	return a.svc.SelectSafeOnly(items)
 }
@@ -169,10 +254,34 @@ func (a *App) GetAuditLogPath() string {
 	return a.svc.GetAuditLogPath()
 }
 
+func (a *App) GetRecentAuditLog(maxLines int) ([]model.AuditLogEntry, error) {
+	return a.svc.GetRecentAuditLog(maxLines)
+}
+
+func (a *App) OpenAuditLog() error {
+	return a.svc.OpenAuditLog()
+}
+
 func (a *App) FormatBytes(b int64) string {
 	return a.svc.FormatBytes(b)
 }
 
 func (a *App) Ping() string {
 	return a.svc.Ping()
+}
+
+// PickFolders opens a native folder picker. Set allowMultiple to select several folders at once (macOS).
+func (a *App) PickFolders(allowMultiple bool, defaultDirectory string) ([]string, error) {
+	if a.ctx == nil {
+		return nil, nil
+	}
+	title := "Choose a folder"
+	if allowMultiple {
+		title = "Choose folders"
+	}
+	return dialog.PickFolders(a.ctx, dialog.Options{
+		Title:            title,
+		DefaultDirectory: defaultDirectory,
+		AllowMultiple:    allowMultiple,
+	})
 }
