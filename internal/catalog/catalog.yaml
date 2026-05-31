@@ -1,0 +1,248 @@
+categories:
+  - id: user_caches
+    label: User Caches
+    risk: safe
+    description: Application cache files safe to remove
+    paths:
+      - "~/Library/Caches"
+    rules:
+      - glob: "**/*"
+        min_age_days: 1
+        exclude:
+          - "**/com.apple.Safari/**"
+          - "**/CloudKit/**"
+
+  - id: user_logs
+    label: User Logs
+    risk: safe
+    description: Application log files
+    paths:
+      - "~/Library/Logs"
+    rules:
+      - glob: "**/*"
+        min_age_days: 7
+        exclude:
+          - "**/DiagnosticReports/**"
+
+  - id: system_logs
+    label: System Logs
+    risk: moderate
+    description: System and diagnostic logs
+    paths:
+      - "/Library/Logs"
+      - "/private/var/log"
+    rules:
+      - glob: "**/*.log"
+        min_age_days: 14
+      - glob: "**/*.gz"
+        min_age_days: 14
+
+  - id: temp_files
+    label: Temporary Files
+    risk: safe
+    description: Temporary files in user temp directories
+    paths:
+      - "~/Library/Application Support/CrashReporter"
+    rules:
+      - glob: "**/*"
+        min_age_days: 7
+
+  - id: downloads_incomplete
+    label: Incomplete Downloads
+    risk: safe
+    description: Safari and partial download artifacts
+    paths:
+      - "~/Downloads"
+    rules:
+      - glob: "**/*.download"
+        min_age_days: 1
+      - glob: "**/*.crdownload"
+        min_age_days: 1
+      - glob: "**/*.part"
+        min_age_days: 1
+
+  - id: xcode_derived
+    label: Xcode DerivedData
+    risk: moderate
+    description: Xcode build artifacts (will require rebuild)
+    paths:
+      - "~/Library/Developer/Xcode/DerivedData"
+    rules:
+      - glob: "**/*"
+        min_age_days: 0
+
+  - id: xcode_archives
+    label: Xcode Archives
+    risk: risky
+    description: Xcode archive bundles
+    paths:
+      - "~/Library/Developer/Xcode/Archives"
+    rules:
+      - glob: "**/*"
+        min_age_days: 30
+
+  - id: xcode_simulators
+    label: Simulator Caches
+    risk: moderate
+    description: iOS Simulator cache data
+    paths:
+      - "~/Library/Developer/CoreSimulator/Caches"
+    rules:
+      - glob: "**/*"
+        min_age_days: 7
+
+  - id: homebrew_cache
+    label: Homebrew Cache
+    risk: safe
+    description: Homebrew download cache
+    paths:
+      - "~/Library/Caches/Homebrew"
+    rules:
+      - glob: "**/*"
+        min_age_days: 0
+
+  - id: npm_cache
+    label: npm Cache
+    risk: safe
+    description: npm package cache
+    paths:
+      - "~/.npm"
+    rules:
+      - glob: "**/*"
+        min_age_days: 0
+
+  - id: yarn_cache
+    label: Yarn Cache
+    risk: safe
+    description: Yarn package cache
+    paths:
+      - "~/Library/Caches/Yarn"
+    rules:
+      - glob: "**/*"
+        min_age_days: 0
+
+  - id: pip_cache
+    label: pip Cache
+    risk: safe
+    description: Python pip cache
+    paths:
+      - "~/Library/Caches/pip"
+    rules:
+      - glob: "**/*"
+        min_age_days: 0
+
+  - id: go_build_cache
+    label: Go Build Cache
+    risk: moderate
+    description: Go build cache (GOCACHE)
+    paths:
+      - "~/Library/Caches/go-build"
+    rules:
+      - glob: "**/*"
+        min_age_days: 0
+
+  - id: docker_cache
+    label: Docker Cache
+    risk: moderate
+    description: Docker Desktop cache data
+    paths:
+      - "~/Library/Containers/com.docker.docker/Data"
+    rules:
+      - glob: "**/log/**"
+        min_age_days: 7
+
+  - id: slack_cache
+    label: Slack Cache
+    risk: safe
+    description: Slack application cache
+    paths:
+      - "~/Library/Application Support/Slack/Cache"
+      - "~/Library/Application Support/Slack/Service Worker/CacheStorage"
+    rules:
+      - glob: "**/*"
+        min_age_days: 1
+
+  - id: chrome_cache
+    label: Chrome Cache
+    risk: safe
+    description: Google Chrome cache
+    paths:
+      - "~/Library/Application Support/Google/Chrome/Default/Cache"
+      - "~/Library/Application Support/Google/Chrome/Default/Code Cache"
+    rules:
+      - glob: "**/*"
+        min_age_days: 1
+
+  - id: firefox_cache
+    label: Firefox Cache
+    risk: safe
+    description: Firefox browser cache
+    paths:
+      - "~/Library/Caches/Firefox"
+    rules:
+      - glob: "**/*"
+        min_age_days: 1
+
+  - id: vscode_cache
+    label: VS Code Cache
+    risk: safe
+    description: Visual Studio Code cache and logs
+    paths:
+      - "~/Library/Application Support/Code/Cache"
+      - "~/Library/Application Support/Code/CachedData"
+      - "~/Library/Application Support/Code/logs"
+    rules:
+      - glob: "**/*"
+        min_age_days: 7
+
+  - id: spotify_cache
+    label: Spotify Cache
+    risk: safe
+    description: Spotify offline cache
+    paths:
+      - "~/Library/Caches/com.spotify.client"
+    rules:
+      - glob: "**/*"
+        min_age_days: 7
+
+  - id: mail_downloads
+    label: Mail Attachments Cache
+    risk: moderate
+    description: Cached Mail attachment downloads
+    paths:
+      - "~/Library/Containers/com.apple.mail/Data/Library/Mail Downloads"
+    rules:
+      - glob: "**/*"
+        min_age_days: 30
+
+  - id: trash_metadata
+    label: Finder Metadata
+    risk: safe
+    description: .DS_Store files outside active projects
+    paths:
+      - "~/Downloads"
+      - "~/Documents"
+      - "~/Desktop"
+    rules:
+      - glob: "**/.DS_Store"
+        min_age_days: 0
+
+  - id: ios_backups
+    label: iOS Device Backups
+    risk: risky
+    description: Local iPhone/iPad backups
+    paths:
+      - "~/Library/Application Support/MobileSync/Backup"
+    rules:
+      - glob: "**/*"
+        min_age_days: 60
+
+  - id: user_saved_state
+    label: Saved Application State
+    risk: moderate
+    description: Window state snapshots
+    paths:
+      - "~/Library/Saved Application State"
+    rules:
+      - glob: "**/*"
+        min_age_days: 30

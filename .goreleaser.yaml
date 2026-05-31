@@ -1,0 +1,23 @@
+version: 2
+project_name: mac-cleaner
+before:
+  hooks:
+    - go mod tidy
+    - cd frontend && npm install && npm run build
+builds:
+  - id: mac-cleaner
+    main: .
+    binary: mac-cleaner
+    goos:
+      - darwin
+    goarch:
+      - arm64
+      - amd64
+    hooks:
+      post: |
+        codesign --deep --force --options runtime --sign "${MACOS_SIGN_IDENTITY}" "{{ .Path }}" || true
+archives:
+  - format: dmg
+    name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+    files:
+      - README.md

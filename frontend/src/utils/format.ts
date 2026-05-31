@@ -1,0 +1,17 @@
+export function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
+}
+
+export function formatPercent(used: number, total: number): number {
+  if (total === 0) return 0;
+  return Math.round((used / total) * 100);
+}
+
+export function basename(path: string): string {
+  const parts = path.split('/');
+  return parts[parts.length - 1] || path;
+}
