@@ -6,7 +6,7 @@ A macOS desktop maintenance app built with Go (Wails) and React. Scans junk file
 
 **[Download the latest release (DMG)](https://github.com/truong512/mac-cleaner/releases/latest)** — macOS 12+
 
-Release assets are built with [GoReleaser](.goreleaser.yaml):
+Release assets are built by GitHub Actions (see [Releases](#releases)):
 
 - **Apple Silicon:** `mac-cleaner-<version>-darwin-arm64.dmg`
 - **Intel:** `mac-cleaner-<version>-darwin-amd64.dmg`
@@ -73,6 +73,64 @@ The production binary embeds `frontend/dist`. Run `cd frontend && npm run build`
 go test ./...
 ```
 
+## Releases
+
+Releases are automated with GitHub Actions. Pushing a version tag builds both macOS DMGs and publishes a GitHub Release.
+
+### Workflows
+
+| Workflow | Trigger | What it does |
+| --- | --- | --- |
+| [CI](.github/workflows/ci.yml) | Push or PR to `main` | Runs tests, builds the frontend, and verifies the full release build |
+| [Release](.github/workflows/release.yml) | Push tag `v*` (e.g. `v0.1.4`) | Runs tests, builds DMGs, and publishes a GitHub Release |
+
+Both workflows run on `macos-latest` because Wails macOS builds require a Mac host.
+
+### Cut a release
+
+1. Merge your changes to `main`.
+2. Create and push a semver tag:
+
+```bash
+git tag v0.1.4
+git push origin v0.1.4
+```
+
+3. Watch the [Actions tab](https://github.com/truong512/mac-cleaner/actions) — the **Release** workflow will:
+   - run `go test ./...`
+   - build Apple Silicon and Intel DMGs via [scripts/build-release.sh](scripts/build-release.sh)
+   - create a GitHub Release with auto-generated release notes
+
+Release assets:
+
+- `mac-cleaner-<version>-darwin-arm64.dmg`
+- `mac-cleaner-<version>-darwin-amd64.dmg`
+
+### Build locally
+
+To produce the same DMGs on your Mac without publishing:
+
+```bash
+./scripts/build-release.sh 0.1.4
+# outputs to dist/release/
+```
+
+Requires Go, Node.js, and the Wails CLI (`go install github.com/wailsapp/wails/v2/cmd/wails@latest`).
+
+### Code signing (optional)
+
+By default, Wails ad-hoc signs the app during build. For Developer ID signing in CI, add a repository secret:
+
+| Secret | Value |
+| --- | --- |
+| `MACOS_SIGN_IDENTITY` | Your certificate name, e.g. `Developer ID Application: Your Name` |
+
+The release script signs the `.app` bundle before packaging when this secret is set. Notarization is not automated; see [Distribution](#distribution-signing--notarization) for manual steps.
+
+### GoReleaser (optional)
+
+[.goreleaser.yaml](.goreleaser.yaml) is kept for local use with [GoReleaser Pro](https://goreleaser.com/pro/) (DMG packaging is a Pro feature). CI uses `scripts/build-release.sh` instead.
+
 ## CLI (debug)
 
 Headless junk scan against the embedded catalog:
@@ -96,7 +154,7 @@ The path is shown on the Settings page.
 
 ## Distribution (signing & notarization)
 
-[GoReleaser](https://goreleaser.com/) is configured in `.goreleaser.yaml` (darwin arm64/amd64, DMG archives). Set `MACOS_SIGN_IDENTITY` to your Developer ID Application certificate name for post-build codesigning.
+Release builds are produced by GitHub Actions (see [Releases](#releases)). Set the `MACOS_SIGN_IDENTITY` repository secret for Developer ID signing in CI, or sign locally after `./scripts/build-release.sh`.
 
 Manual signing example:
 
@@ -139,6 +197,8 @@ mac-cleaner/
 │   └── model/                   # Shared types
 ├── frontend/                    # React + TypeScript + Vite UI
 │   └── src/pages/               # Dashboard, Junk, Apps, Duplicates, Big Files, Disk, Settings
+├── scripts/build-release.sh     # Local + CI DMG build script
+├── .github/workflows/           # CI and release automation
 └── cmd/maccleaner-cli/          # Optional headless junk scan
 ```
 

@@ -1,5 +1,6 @@
 version: 2
 project_name: mac-cleaner
+# DMG packaging requires GoReleaser Pro. CI uses scripts/build-release.sh instead.
 before:
   hooks:
     - go mod tidy
@@ -8,6 +9,8 @@ builds:
   - id: mac-cleaner
     main: .
     binary: mac-cleaner
+    env:
+      - CGO_ENABLED=1
     goos:
       - darwin
     goarch:
@@ -15,7 +18,7 @@ builds:
       - amd64
     hooks:
       post: |
-        codesign --deep --force --options runtime --sign "${MACOS_SIGN_IDENTITY}" "{{ .Path }}" || true
+        test -n "$MACOS_SIGN_IDENTITY" && codesign --deep --force --options runtime --sign "$MACOS_SIGN_IDENTITY" "{{ .Path }}"
 archives:
   - format: dmg
     name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
