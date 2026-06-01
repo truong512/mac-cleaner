@@ -21,15 +21,9 @@ To build from source instead, see [Development](#development).
 
 ![Mac Cleaner dashboard](docs/screenshots/dashboard.png)
 
-**Smart Scan**, **Big Files**, and **Space Map**:
-
 **Smart Scan**
 
 ![Smart Scan](docs/screenshots/smart-scan.png)
-
-**Big Files**
-
-![Big Files](docs/screenshots/big-files.png)
 
 **Space Map**
 
@@ -43,7 +37,11 @@ To build from source instead, see [Development](#development).
 - **Duplicates** — BLAKE3-based duplicate finder with keeper selection
 - **Big Files** — Scan configurable roots for files above a size threshold and/or archive types (zip, dmg, pkg, etc.), with bulk trash cleanup
 - **Space Map** — Interactive ECharts treemap with drill-down, top-files list, and Reveal in Finder
-- **Safety** — Trash-first deletions (via Finder Trash), dry-run default, trash confirmation dialog, JSON audit log, and path exclude globs in Settings
+- **Smart Scan presets** — Filter categories by Developer, Browsers, Apple, or Photos & Mail tags
+- **Storage insights** — Dashboard cards for Photos library, Mail cache, and developer footprint (read-only)
+- **Local snapshots** — List and delete APFS local Time Machine snapshots (`tmutil`)
+- **Docker** — `docker system df` breakdown and prune with dry-run preview
+- **Safety** — Trash-first deletions (via Finder Trash), dry-run default, trash confirmation dialog, JSON audit log, path exclude globs in Settings (persisted to `~/Library/Application Support/mac-cleaner/settings.json`)
 
 ## Requirements
 
@@ -175,7 +173,11 @@ xcrun stapler staple mac-cleaner.dmg
 - [ ] Duplicate scan finds known duplicate set
 - [ ] Space Map treemap drills down and reveals in Finder
 - [ ] Cancel stops long-running scans and trash operations
-- [ ] Settings persist dry-run default, exclude globs, and big-files minimum size
+- [x] Settings persist dry-run default, exclude globs, and big-files minimum size
+- [ ] Smart Scan presets filter categories (do not auto-select files)
+- [ ] Dashboard shows Photos/Mail/Developer insight sizes
+- [ ] Local snapshots page lists and deletes snapshots (with confirmation)
+- [ ] Docker page shows usage when Docker CLI is available
 - [ ] Audit log records cleanup actions
 
 ## Project structure
@@ -194,6 +196,10 @@ mac-cleaner/
 │   ├── delete/                  # Trash, bulk delete, audit log
 │   ├── permission/              # Full Disk Access checks
 │   ├── launchd/                 # LaunchAgent unload on uninstall
+│   ├── timemachine/             # Local APFS snapshot list/delete
+│   ├── docker/                  # Docker system df and prune
+│   ├── insights/                # Dashboard storage insights
+│   ├── settings/                # Persisted app settings
 │   └── model/                   # Shared types
 ├── frontend/                    # React + TypeScript + Vite UI
 │   └── src/pages/               # Dashboard, Junk, Apps, Duplicates, Big Files, Disk, Settings

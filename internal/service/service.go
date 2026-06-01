@@ -19,6 +19,7 @@ import (
 	"mac-cleaner/internal/model"
 	"mac-cleaner/internal/permission"
 	"mac-cleaner/internal/scan"
+	"mac-cleaner/internal/settings"
 )
 
 type Service struct {
@@ -51,16 +52,16 @@ func New() (*Service, error) {
 	if err != nil {
 		return nil, err
 	}
+	appSettings, err := settings.Load()
+	if err != nil {
+		appSettings = settings.Default()
+	}
 	return &Service{
 		deleteSvc: delete.NewService(),
 		scanEng:   scan.NewEngine(cat),
 		catalog:   cat,
 		iconCache: make(map[string]string),
-		settings: model.AppSettings{
-			DryRunDefault:    true,
-			ExcludeGlobs:     []string{},
-			BigFilesMinBytes: bigfiles.DefaultMinSizeBytes,
-		},
+		settings:  appSettings,
 	}, nil
 }
 
@@ -142,10 +143,11 @@ func (s *Service) GetSettings() model.AppSettings {
 	return s.settings
 }
 
-func (s *Service) SaveSettings(settings model.AppSettings) {
+func (s *Service) SaveSettings(appSettings model.AppSettings) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.settings = settings
+	s.settings = appSettings
+	s.mu.Unlock()
+	_ = settings.Save(appSettings)
 }
 
 func (s *Service) GetCatalogCategories() []model.CategorySummary {

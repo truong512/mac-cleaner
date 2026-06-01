@@ -46,8 +46,24 @@ export function DeleteDuplicates(arg1) {
   return window['go']['main']['App']['DeleteDuplicates'](arg1);
 }
 
+export function DeleteLocalSnapshots(arg1) {
+  return window['go']['main']['App']['DeleteLocalSnapshots'](arg1);
+}
+
+export function DockerIsAvailable() {
+  return window['go']['main']['App']['DockerIsAvailable']();
+}
+
+export function DockerPrune(arg1, arg2) {
+  return window['go']['main']['App']['DockerPrune'](arg1, arg2);
+}
+
 export function ExecuteCleanup(arg1) {
   return window['go']['main']['App']['ExecuteCleanup'](arg1);
+}
+
+export function FilterJunkCategoryIDsByTags(arg1) {
+  return window['go']['main']['App']['FilterJunkCategoryIDsByTags'](arg1);
 }
 
 export function ForceCleanup(arg1) {
@@ -90,6 +106,10 @@ export function GetDiskSummary() {
   return window['go']['main']['App']['GetDiskSummary']();
 }
 
+export function GetDockerDiskUsage() {
+  return window['go']['main']['App']['GetDockerDiskUsage']();
+}
+
 export function GetJunkCategoryRows() {
   return window['go']['main']['App']['GetJunkCategoryRows']();
 }
@@ -130,6 +150,10 @@ export function GetSettings() {
   return window['go']['main']['App']['GetSettings']();
 }
 
+export function GetStorageInsights() {
+  return window['go']['main']['App']['GetStorageInsights']();
+}
+
 export function GetTopFiles(arg1, arg2) {
   return window['go']['main']['App']['GetTopFiles'](arg1, arg2);
 }
@@ -140,6 +164,10 @@ export function ListApps() {
 
 export function ListDiskChildren(arg1) {
   return window['go']['main']['App']['ListDiskChildren'](arg1);
+}
+
+export function ListLocalSnapshots(arg1) {
+  return window['go']['main']['App']['ListLocalSnapshots'](arg1);
 }
 
 export function OpenAuditLog() {
@@ -220,6 +248,10 @@ export function SelectBigFilesLargeOnly() {
 
 export function SelectBigFilesOnly(arg1) {
   return window['go']['main']['App']['SelectBigFilesOnly'](arg1);
+}
+
+export function SelectJunkByTags(arg1) {
+  return window['go']['main']['App']['SelectJunkByTags'](arg1);
 }
 
 export function SelectJunkSafeOnly() {

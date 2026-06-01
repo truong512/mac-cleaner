@@ -145,9 +145,21 @@ categories:
   - id: docker_cache
     label: Docker Cache
     risk: moderate
-    description: Docker Desktop cache data
+    description: Docker Desktop log files (use Docker page for images and volumes)
+    tags: [developer]
     paths:
       - "~/Library/Containers/com.docker.docker/Data"
+    rules:
+      - glob: "**/log/**"
+        min_age_days: 7
+
+  - id: docker_desktop_logs
+    label: Docker Desktop Group Logs
+    risk: safe
+    description: Docker Desktop group container log files
+    tags: [developer]
+    paths:
+      - "~/Library/Group Containers/group.com.docker"
     rules:
       - glob: "**/log/**"
         min_age_days: 7
@@ -166,23 +178,50 @@ categories:
   - id: chrome_cache
     label: Chrome Cache
     risk: safe
-    description: Google Chrome cache
+    description: Google Chrome caches (GPU, shader, HTTP cache, service workers; all profiles)
+    tags: [browser]
     paths:
-      - "~/Library/Application Support/Google/Chrome/Default/Cache"
-      - "~/Library/Application Support/Google/Chrome/Default/Code Cache"
+      - "~/Library/Application Support/Google/Chrome"
     rules:
-      - glob: "**/*"
-        min_age_days: 1
+      - glob: "**/Cache/**"
+        min_age_days: 0
+      - glob: "**/Code Cache/**"
+        min_age_days: 0
+      - glob: "**/GPUCache/**"
+        min_age_days: 0
+      - glob: "**/DawnGraphiteCache/**"
+        min_age_days: 0
+      - glob: "**/DawnWebGPUCache/**"
+        min_age_days: 0
+      - glob: "**/GrShaderCache/**"
+        min_age_days: 0
+      - glob: "**/ShaderCache/**"
+        min_age_days: 0
+      - glob: "**/CacheStorage/**"
+        min_age_days: 0
 
   - id: firefox_cache
     label: Firefox Cache
     risk: safe
     description: Firefox browser cache
+    tags: [browser]
     paths:
       - "~/Library/Caches/Firefox"
     rules:
       - glob: "**/*"
-        min_age_days: 1
+        min_age_days: 0
+
+  - id: safari_cache
+    label: Safari Cache
+    risk: safe
+    description: Safari browser cache (may require Full Disk Access)
+    tags: [browser, apple]
+    requires_fda: true
+    paths:
+      - "~/Library/Caches/com.apple.Safari"
+    rules:
+      - glob: "**/*"
+        min_age_days: 0
 
   - id: vscode_cache
     label: VS Code Cache
@@ -209,12 +248,17 @@ categories:
   - id: mail_downloads
     label: Mail Attachments Cache
     risk: moderate
-    description: Cached Mail attachment downloads
+    description: Cached Mail attachment downloads (not your mailbox)
+    tags: [mail, apple]
+    requires_fda: true
     paths:
       - "~/Library/Containers/com.apple.mail/Data/Library/Mail Downloads"
+      - "~/Library/Group Containers/group.com.apple.mail"
     rules:
-      - glob: "**/*"
-        min_age_days: 30
+      - glob: "**/Mail Downloads/**"
+        min_age_days: 0
+      - glob: "**/Mail Downloads/*"
+        min_age_days: 0
 
   - id: trash_metadata
     label: Finder Metadata
@@ -385,35 +429,77 @@ categories:
   - id: edge_cache
     label: Microsoft Edge Cache
     risk: safe
-    description: Microsoft Edge browser cache
+    description: Microsoft Edge caches (all profiles)
+    tags: [browser]
     paths:
-      - "~/Library/Application Support/Microsoft Edge/Default/Cache"
-      - "~/Library/Application Support/Microsoft Edge/Default/Code Cache"
+      - "~/Library/Application Support/Microsoft Edge"
     rules:
-      - glob: "**/*"
-        min_age_days: 1
+      - glob: "**/Cache/**"
+        min_age_days: 0
+      - glob: "**/Code Cache/**"
+        min_age_days: 0
+      - glob: "**/GPUCache/**"
+        min_age_days: 0
+      - glob: "**/DawnGraphiteCache/**"
+        min_age_days: 0
+      - glob: "**/DawnWebGPUCache/**"
+        min_age_days: 0
+      - glob: "**/GrShaderCache/**"
+        min_age_days: 0
+      - glob: "**/ShaderCache/**"
+        min_age_days: 0
+      - glob: "**/CacheStorage/**"
+        min_age_days: 0
 
   - id: brave_cache
     label: Brave Cache
     risk: safe
-    description: Brave browser cache
+    description: Brave browser caches (all profiles)
+    tags: [browser]
     paths:
-      - "~/Library/Application Support/BraveSoftware/Brave-Browser/Default/Cache"
-      - "~/Library/Application Support/BraveSoftware/Brave-Browser/Default/Code Cache"
+      - "~/Library/Application Support/BraveSoftware/Brave-Browser"
     rules:
-      - glob: "**/*"
-        min_age_days: 1
+      - glob: "**/Cache/**"
+        min_age_days: 0
+      - glob: "**/Code Cache/**"
+        min_age_days: 0
+      - glob: "**/GPUCache/**"
+        min_age_days: 0
+      - glob: "**/DawnGraphiteCache/**"
+        min_age_days: 0
+      - glob: "**/DawnWebGPUCache/**"
+        min_age_days: 0
+      - glob: "**/GrShaderCache/**"
+        min_age_days: 0
+      - glob: "**/ShaderCache/**"
+        min_age_days: 0
+      - glob: "**/CacheStorage/**"
+        min_age_days: 0
 
   - id: arc_cache
     label: Arc Browser Cache
     risk: safe
-    description: Arc browser cache
+    description: Arc browser caches (all profiles)
+    tags: [browser]
     paths:
-      - "~/Library/Application Support/Arc/User Data/Default/Cache"
-      - "~/Library/Application Support/Arc/User Data/Default/Code Cache"
+      - "~/Library/Application Support/Arc/User Data"
     rules:
-      - glob: "**/*"
-        min_age_days: 1
+      - glob: "**/Cache/**"
+        min_age_days: 0
+      - glob: "**/Code Cache/**"
+        min_age_days: 0
+      - glob: "**/GPUCache/**"
+        min_age_days: 0
+      - glob: "**/DawnGraphiteCache/**"
+        min_age_days: 0
+      - glob: "**/DawnWebGPUCache/**"
+        min_age_days: 0
+      - glob: "**/GrShaderCache/**"
+        min_age_days: 0
+      - glob: "**/ShaderCache/**"
+        min_age_days: 0
+      - glob: "**/CacheStorage/**"
+        min_age_days: 0
 
   - id: discord_cache
     label: Discord Cache
@@ -476,9 +562,80 @@ categories:
   - id: photos_analysis_cache
     label: Photos Analysis Cache
     risk: safe
-    description: macOS Photos ML analysis cache (rebuilt on next scan)
+    description: Photos ML and app caches (rebuilt on next open; not your photo library)
+    tags: [photos, apple]
+    requires_fda: true
     paths:
       - "~/Library/Caches/com.apple.MediaAnalysis"
+      - "~/Library/Caches/com.apple.Photos"
+      - "~/Library/Containers/com.apple.Photos/Data/Library/Caches"
+      - "~/Library/Containers/com.apple.mediaanalysisd/Data/Library/Caches"
     rules:
       - glob: "**/*"
-        min_age_days: 7
+        min_age_days: 0
+
+  - id: xcode_spm
+    label: Xcode Source Packages
+    risk: moderate
+    description: Swift Package Manager checkouts (re-downloaded on next build)
+    tags: [developer]
+    paths:
+      - "~/Library/Developer/Xcode/SourcePackages"
+    rules:
+      - glob: "**/*"
+        min_age_days: 0
+
+  - id: xcode_swiftpm
+    label: SwiftPM Cache
+    risk: moderate
+    description: Global Swift Package Manager cache
+    tags: [developer]
+    paths:
+      - "~/Library/Caches/org.swift.swiftpm"
+    rules:
+      - glob: "**/*"
+        min_age_days: 0
+
+  - id: simulator_devices
+    label: Simulator Device Data
+    risk: risky
+    description: Offline iOS Simulator device data not used in 90+ days (removes offline simulators)
+    tags: [developer]
+    paths:
+      - "~/Library/Developer/CoreSimulator/Devices"
+    rules:
+      - glob: "**/*"
+        min_age_days: 90
+
+  - id: mail_app_cache
+    label: Mail App Cache
+    risk: safe
+    description: Mail.app caches and temp files (not your mailbox data)
+    tags: [mail, apple]
+    requires_fda: true
+    paths:
+      - "~/Library/Caches/com.apple.mail"
+      - "~/Library/Containers/com.apple.mail/Data/Library/Caches"
+      - "~/Library/Group Containers/group.com.apple.mail"
+    rules:
+      - glob: "**/*"
+        min_age_days: 0
+      - glob: "**/Cache/**"
+        min_age_days: 0
+      - glob: "**/tmp/**"
+        min_age_days: 0
+
+  - id: photos_thumbnails
+    label: Photos Thumbnail Cache
+    risk: safe
+    description: Photos thumbnail and preview caches (not Photos Library originals)
+    tags: [photos, apple]
+    requires_fda: true
+    paths:
+      - "~/Library/Caches/com.apple.iPhoto"
+      - "~/Library/Caches/com.apple.Photos"
+      - "~/Library/Group Containers/group.com.apple.Photos.PhotosFileProvider"
+      - "~/Library/Group Containers/group.com.apple.mobileslideshow.PhotosFileProvider"
+    rules:
+      - glob: "**/*"
+        min_age_days: 0

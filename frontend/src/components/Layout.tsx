@@ -1,4 +1,5 @@
 import { Navigate, NavLink, useLocation } from 'react-router-dom';
+import appIcon from '@app-icon';
 import { ScanCacheProvider } from '../context/ScanCacheContext';
 import { KeepAlivePage } from './KeepAlivePage';
 import { ProgressOverlay } from './ProgressOverlay';
@@ -10,6 +11,8 @@ import { Duplicates } from '../pages/Duplicates';
 import { DiskMap } from '../pages/DiskMap';
 import { BigFiles } from '../pages/BigFiles';
 import { SettingsPage } from '../pages/Settings';
+import { Snapshots } from '../pages/Snapshots';
+import { DockerPage } from '../pages/Docker';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: '◉' },
@@ -18,10 +21,11 @@ const navItems = [
   { to: '/duplicates', label: 'Duplicates', icon: '⧉' },
   { to: '/bigfiles', label: 'Big Files', icon: '▤' },
   { to: '/disk', label: 'Space Map', icon: '◫' },
+  { to: '/docker', label: 'Docker', icon: '⬡' },
   { to: '/settings', label: 'Settings', icon: '⚙' },
 ];
 
-const KNOWN_PATHS = new Set(navItems.map((item) => item.to));
+const KNOWN_PATHS = new Set([...navItems.map((item) => item.to), '/snapshots']);
 
 export function Layout() {
   const { progress, active, kind } = useOperationProgress();
@@ -31,7 +35,7 @@ export function Layout() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <span className="brand-icon">⌘</span>
+          <img src={appIcon} alt="" className="brand-icon" width={36} height={36} />
           <div>
             <strong>Mac Cleaner</strong>
             <small>System maintenance</small>
@@ -71,6 +75,8 @@ export function Layout() {
           </KeepAlivePage>
           {path === '/' && <Dashboard />}
           {path === '/settings' && <SettingsPage />}
+          {path === '/snapshots' && <Snapshots />}
+          {path === '/docker' && <DockerPage />}
           {!KNOWN_PATHS.has(path) && <Navigate to="/" replace />}
         </ScanCacheProvider>
       </main>

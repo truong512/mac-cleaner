@@ -23,6 +23,11 @@ export type ScanProgress = {
   message?: string;
 };
 export type AppSettings = model.AppSettings;
+export type LocalSnapshot = model.LocalSnapshot;
+export type StorageInsight = model.StorageInsight;
+export type DockerDiskUsage = model.DockerDiskUsage;
+export type DockerDiskRow = model.DockerDiskRow;
+export type DockerPruneOptions = model.DockerPruneOptions;
 export type DeleteResult = {
   path: string;
   success: boolean;

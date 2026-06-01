@@ -315,14 +315,16 @@ export function BigFiles() {
         <div className="grid-2 grid-fill">
           <div className="card card-scroll">
             <h3>Categories</h3>
-            <CategoryListPanel
-              categories={categories}
-              filterCategoryId={filterCategoryId}
-              onFilterChange={setFilterCategoryId}
-              onToggleCategory={toggleCat}
-              emptyMessage="Press Scan to find large and archive files."
-              totalItemCount={items.length}
-            />
+            <div className="scroll-pane categories-scroll">
+              <CategoryListPanel
+                categories={categories}
+                filterCategoryId={filterCategoryId}
+                onFilterChange={setFilterCategoryId}
+                onToggleCategory={toggleCat}
+                emptyMessage="Press Scan to find large and archive files."
+                totalItemCount={items.length}
+              />
+            </div>
           </div>
 
           <div className="card card-scroll">

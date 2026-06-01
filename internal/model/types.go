@@ -21,11 +21,13 @@ type ScanItem struct {
 }
 
 type CategorySummary struct {
-	ID        string `json:"id"`
-	Label     string `json:"label"`
-	Risk      Risk   `json:"risk"`
-	ItemCount int    `json:"itemCount"`
-	SizeBytes int64  `json:"sizeBytes"`
+	ID          string   `json:"id"`
+	Label       string   `json:"label"`
+	Risk        Risk     `json:"risk"`
+	ItemCount   int      `json:"itemCount"`
+	SizeBytes   int64    `json:"sizeBytes"`
+	Tags        []string `json:"tags,omitempty"`
+	RequiresFDA bool     `json:"requiresFda,omitempty"`
 }
 
 type JunkCategoryRow struct {
@@ -139,9 +141,43 @@ type ScanProgress struct {
 }
 
 type AppSettings struct {
-	DryRunDefault     bool     `json:"dryRunDefault"`
-	ExcludeGlobs      []string `json:"excludeGlobs"`
-	BigFilesMinBytes  int64    `json:"bigFilesMinBytes"`
+	DryRunDefault    bool     `json:"dryRunDefault"`
+	ExcludeGlobs     []string `json:"excludeGlobs"`
+	BigFilesMinBytes int64    `json:"bigFilesMinBytes"`
+}
+
+type LocalSnapshot struct {
+	Name  string `json:"name"`
+	Date  string `json:"date,omitempty"`
+	Mount string `json:"mount"`
+}
+
+type DockerDiskRow struct {
+	Type        string `json:"type"`
+	Total       int64  `json:"total"`
+	Active      int64  `json:"active"`
+	Reclaimable int64  `json:"reclaimable"`
+}
+
+type DockerDiskUsage struct {
+	Available bool            `json:"available"`
+	Rows      []DockerDiskRow `json:"rows"`
+	Error     string          `json:"error,omitempty"`
+}
+
+type DockerPruneOptions struct {
+	All            bool `json:"all"`
+	Volumes        bool `json:"volumes"`
+	Builder        bool `json:"builder"`
+}
+
+type StorageInsight struct {
+	ID          string `json:"id"`
+	Label       string `json:"label"`
+	SizeBytes   int64  `json:"sizeBytes"`
+	Available   bool   `json:"available"`
+	Description string `json:"description,omitempty"`
+	Preset      string `json:"preset,omitempty"`
 }
 
 type BigFilesScanRequest struct {

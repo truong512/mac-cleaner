@@ -60,6 +60,8 @@ export namespace model {
 	    risk: string;
 	    itemCount: number;
 	    sizeBytes: number;
+	    tags?: string[];
+	    requiresFda?: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new CategorySummary(source);
@@ -72,6 +74,8 @@ export namespace model {
 	        this.risk = source["risk"];
 	        this.itemCount = source["itemCount"];
 	        this.sizeBytes = source["sizeBytes"];
+	        this.tags = source["tags"];
+	        this.requiresFda = source["requiresFda"];
 	    }
 	}
 	export class CleanupFailure {
@@ -248,6 +252,74 @@ export namespace model {
 	        this.mountPoint = source["mountPoint"];
 	    }
 	}
+	export class DockerDiskRow {
+	    type: string;
+	    total: number;
+	    active: number;
+	    reclaimable: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new DockerDiskRow(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.type = source["type"];
+	        this.total = source["total"];
+	        this.active = source["active"];
+	        this.reclaimable = source["reclaimable"];
+	    }
+	}
+	export class DockerDiskUsage {
+	    available: boolean;
+	    rows: DockerDiskRow[];
+	    error?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new DockerDiskUsage(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.available = source["available"];
+	        this.rows = this.convertValues(source["rows"], DockerDiskRow);
+	        this.error = source["error"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class DockerPruneOptions {
+	    all: boolean;
+	    volumes: boolean;
+	    builder: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new DockerPruneOptions(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.all = source["all"];
+	        this.volumes = source["volumes"];
+	        this.builder = source["builder"];
+	    }
+	}
 	export class DuplicateGroup {
 	    hash: string;
 	    sizeBytes: number;
@@ -391,6 +463,22 @@ export namespace model {
 		    return a;
 		}
 	}
+	export class LocalSnapshot {
+	    name: string;
+	    date?: string;
+	    mount: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new LocalSnapshot(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.date = source["date"];
+	        this.mount = source["mount"];
+	    }
+	}
 	export class PermissionStatus {
 	    fullDiskAccess: string;
 	    homeDir: string;
@@ -418,6 +506,28 @@ export namespace model {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.count = source["count"];
 	        this.bytes = source["bytes"];
+	    }
+	}
+	export class StorageInsight {
+	    id: string;
+	    label: string;
+	    sizeBytes: number;
+	    available: boolean;
+	    description?: string;
+	    preset?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new StorageInsight(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.label = source["label"];
+	        this.sizeBytes = source["sizeBytes"];
+	        this.available = source["available"];
+	        this.description = source["description"];
+	        this.preset = source["preset"];
 	    }
 	}
 	export class UninstallSelection {

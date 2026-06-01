@@ -24,12 +24,14 @@ type Rule struct {
 }
 
 type Category struct {
-	ID     string   `yaml:"id"`
-	Label  string   `yaml:"label"`
-	Risk   string   `yaml:"risk"`
-	Paths  []string `yaml:"paths"`
-	Rules  []Rule   `yaml:"rules"`
-	Desc   string   `yaml:"description"`
+	ID          string   `yaml:"id"`
+	Label       string   `yaml:"label"`
+	Risk        string   `yaml:"risk"`
+	Paths       []string `yaml:"paths"`
+	Rules       []Rule   `yaml:"rules"`
+	Desc        string   `yaml:"description"`
+	Tags        []string `yaml:"tags,omitempty"`
+	RequiresFDA bool     `yaml:"requires_fda,omitempty"`
 }
 
 type Catalog struct {
@@ -60,12 +62,68 @@ func (c *Catalog) CategoriesMeta() []model.CategorySummary {
 	out := make([]model.CategorySummary, 0, len(c.Categories))
 	for _, cat := range c.Categories {
 		out = append(out, model.CategorySummary{
-			ID:    cat.ID,
-			Label: cat.Label,
-			Risk:  model.Risk(cat.Risk),
+			ID:          cat.ID,
+			Label:       cat.Label,
+			Risk:        model.Risk(cat.Risk),
+			Tags:        cat.effectiveTags(),
+			RequiresFDA: cat.RequiresFDA,
 		})
 	}
 	return out
+}
+
+func (cat *Category) effectiveTags() []string {
+	if len(cat.Tags) > 0 {
+		return append([]string(nil), cat.Tags...)
+	}
+	return inferTags(cat.ID)
+}
+
+func inferTags(id string) []string {
+	switch {
+	case strings.HasPrefix(id, "xcode_") || strings.HasPrefix(id, "simulator") ||
+		id == "homebrew_cache" || id == "npm_cache" || id == "yarn_cache" || id == "pip_cache" ||
+		id == "go_build_cache" || id == "gradle_cache" || id == "cargo_cache" || id == "pnpm_cache" ||
+		id == "bun_cache" || id == "composer_cache" || id == "cocoa_pods_cache" ||
+		id == "android_studio_cache" || id == "jetbrains_cache" || id == "docker_cache" || id == "docker_desktop_logs":
+		return []string{"developer"}
+	case id == "chrome_cache" || id == "firefox_cache" || id == "edge_cache" ||
+		id == "brave_cache" || id == "arc_cache" || id == "safari_cache":
+		return []string{"browser"}
+	case id == "mail_downloads" || id == "mail_app_cache":
+		return []string{"mail", "apple"}
+	case id == "photos_analysis_cache" || id == "photos_thumbnails":
+		return []string{"photos", "apple"}
+	case id == "ios_backups" || id == "software_update_cache" || id == "quicklook_cache" ||
+		id == "help_cache" || id == "system_logs":
+		return []string{"apple"}
+	case id == "user_caches" || id == "user_logs" || id == "temp_files" ||
+		id == "downloads_incomplete" || id == "trash_metadata" || id == "user_saved_state":
+		return []string{"apple"}
+	default:
+		return nil
+	}
+}
+
+// CategoryIDsByTags returns category IDs that match any of the given tags.
+func (c *Catalog) CategoryIDsByTags(tags []string) []string {
+	if len(tags) == 0 {
+		return nil
+	}
+	want := make(map[string]struct{}, len(tags))
+	for _, t := range tags {
+		want[strings.ToLower(strings.TrimSpace(t))] = struct{}{}
+	}
+	var ids []string
+	for _, cat := range c.Categories {
+		for _, tag := range cat.effectiveTags() {
+			if _, ok := want[strings.ToLower(tag)]; ok {
+				ids = append(ids, cat.ID)
+				break
+			}
+		}
+	}
+	return ids
 }
 
 func ExpandPath(p string) (string, error) {
