@@ -282,6 +282,38 @@ func (a *App) Ping() string {
 	return a.svc.Ping()
 }
 
+func (a *App) SelectJunkByTags(tags []string) {
+	a.svc.SelectJunkByTags(tags)
+}
+
+func (a *App) FilterJunkCategoryIDsByTags(tags []string) []string {
+	return a.svc.FilterJunkCategoryIDsByTags(tags)
+}
+
+func (a *App) GetStorageInsights() []model.StorageInsight {
+	return a.svc.GetStorageInsights()
+}
+
+func (a *App) ListLocalSnapshots(mount string) ([]model.LocalSnapshot, error) {
+	return a.svc.ListLocalSnapshots(mount)
+}
+
+func (a *App) DeleteLocalSnapshots(names []string) {
+	a.svc.DeleteLocalSnapshots(names)
+}
+
+func (a *App) DockerIsAvailable() bool {
+	return a.svc.DockerIsAvailable()
+}
+
+func (a *App) GetDockerDiskUsage() (model.DockerDiskUsage, error) {
+	return a.svc.GetDockerDiskUsage()
+}
+
+func (a *App) DockerPrune(opts model.DockerPruneOptions, dryRun bool) {
+	a.svc.DockerPrune(opts, dryRun)
+}
+
 // PickFolders opens a native folder picker. Set allowMultiple to select several folders at once (macOS).
 func (a *App) PickFolders(allowMultiple bool, defaultDirectory string) ([]string, error) {
 	if a.ctx == nil {

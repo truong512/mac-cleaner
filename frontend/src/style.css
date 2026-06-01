@@ -52,11 +52,9 @@ body {
 .brand-icon {
   width: 36px;
   height: 36px;
-  display: grid;
-  place-items: center;
+  flex-shrink: 0;
   border-radius: 10px;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  font-size: 18px;
+  object-fit: cover;
 }
 
 .brand small {
@@ -146,6 +144,16 @@ nav {
   overflow-y: auto;
 }
 
+.dashboard-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dashboard-stack > .grid-3 {
+  margin-bottom: 0;
+}
+
 .grid-2.grid-fill {
   flex: 1;
   min-height: 0;
@@ -167,8 +175,46 @@ nav {
 }
 
 .card-scroll > h3,
-.card-scroll > .preview-header {
+.card-scroll > .preview-header,
+.card-scroll > .preset-bar {
   flex-shrink: 0;
+}
+
+.categories-scroll {
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-top: 8px;
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+.categories-scroll > .alert-compact {
+  margin-bottom: 8px;
+}
+
+.categories-scroll > .list {
+  overflow: visible;
+  min-width: 0;
+}
+
+.categories-scroll .list-row {
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  min-width: 0;
+}
+
+.categories-scroll .list-row-selectable {
+  margin: 0;
+}
+
+.categories-scroll .checkbox-row {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.categories-scroll .list-row-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .card-scroll > .list,
@@ -424,6 +470,313 @@ nav {
   width: 72px;
   height: 72px;
   font-size: 12px;
+}
+
+.preset-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.preset-chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.preset-chip:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.preset-chip.active {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.preset-chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.preset-clear {
+  border-style: dashed;
+}
+
+.dashboard-stack .grid-3 {
+  align-items: stretch;
+}
+
+/* Dashboard — colorful cards & accents */
+.page--dashboard .page-header h1 {
+  background: linear-gradient(90deg, #a78bfa, #f472b6, #38bdf8);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.stat-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stat-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.stat-card {
+  position: relative;
+  overflow: hidden;
+  border-color: transparent;
+}
+
+.stat-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.12;
+  pointer-events: none;
+}
+
+.stat-card--disk::before {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 55%, transparent 100%);
+}
+
+.stat-card--free::before {
+  background: linear-gradient(135deg, #10b981 0%, #34d399 55%, transparent 100%);
+}
+
+.stat-card--perm::before {
+  background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 55%, transparent 100%);
+}
+
+.stat-card--perm-granted::before {
+  background: linear-gradient(135deg, #10b981 0%, #6ee7b7 55%, transparent 100%);
+}
+
+.stat-card--perm-denied::before {
+  background: linear-gradient(135deg, #ef4444 0%, #f87171 55%, transparent 100%);
+}
+
+.stat-card--disk .stat-value {
+  color: #c4b5fd;
+}
+
+.stat-card--free .stat-value {
+  color: #6ee7b7;
+}
+
+.meter-fill--healthy {
+  background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.meter-fill--moderate {
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+}
+
+.meter-fill--warning {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.meter-fill--critical {
+  background: linear-gradient(90deg, #ef4444, #f97316);
+}
+
+.dashboard-actions .action-card {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  border-color: transparent;
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-actions .action-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.dashboard-actions .action-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.14;
+  pointer-events: none;
+}
+
+.action-card-icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.action-card--violet::before {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+}
+.action-card--violet .action-card-icon {
+  background: rgba(99, 102, 241, 0.25);
+  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.35);
+}
+.action-card--violet:hover {
+  border-color: #8b5cf6;
+}
+
+.action-card--rose::before {
+  background: linear-gradient(135deg, #f43f5e, #fb7185);
+}
+.action-card--rose .action-card-icon {
+  background: rgba(244, 63, 94, 0.25);
+  box-shadow: 0 0 0 1px rgba(251, 113, 133, 0.35);
+}
+.action-card--rose:hover {
+  border-color: #fb7185;
+}
+
+.action-card--cyan::before {
+  background: linear-gradient(135deg, #06b6d4, #22d3ee);
+}
+.action-card--cyan .action-card-icon {
+  background: rgba(6, 182, 212, 0.25);
+  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.35);
+}
+.action-card--cyan:hover {
+  border-color: #22d3ee;
+}
+
+.action-card--amber::before {
+  background: linear-gradient(135deg, #f59e0b, #fbbf24);
+}
+.action-card--amber .action-card-icon {
+  background: rgba(245, 158, 11, 0.25);
+  box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.35);
+}
+.action-card--amber:hover {
+  border-color: #fbbf24;
+}
+
+.action-card--emerald::before {
+  background: linear-gradient(135deg, #10b981, #34d399);
+}
+.action-card--emerald .action-card-icon {
+  background: rgba(16, 185, 129, 0.25);
+  box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.35);
+}
+.action-card--emerald:hover {
+  border-color: #34d399;
+}
+
+.action-card--sky::before {
+  background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+}
+.action-card--sky .action-card-icon {
+  background: rgba(14, 165, 233, 0.25);
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.35);
+}
+.action-card--sky:hover {
+  border-color: #38bdf8;
+}
+
+.insight-card--snapshot {
+  border-color: rgba(167, 139, 250, 0.4);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), #111827 50%);
+}
+
+.insight-card--snapshot h3 {
+  color: #c4b5fd;
+}
+
+.insight-card--fuchsia {
+  border-color: rgba(232, 121, 249, 0.35);
+  background: linear-gradient(160deg, rgba(217, 70, 239, 0.12), #111827 55%);
+}
+.insight-card--orange {
+  border-color: rgba(251, 146, 60, 0.35);
+  background: linear-gradient(160deg, rgba(249, 115, 22, 0.12), #111827 55%);
+}
+.insight-card--teal {
+  border-color: rgba(45, 212, 191, 0.35);
+  background: linear-gradient(160deg, rgba(20, 184, 166, 0.12), #111827 55%);
+}
+.insight-card--lime {
+  border-color: rgba(163, 230, 53, 0.35);
+  background: linear-gradient(160deg, rgba(132, 204, 22, 0.12), #111827 55%);
+}
+.insight-card--pink {
+  border-color: rgba(244, 114, 182, 0.35);
+  background: linear-gradient(160deg, rgba(236, 72, 153, 0.12), #111827 55%);
+}
+.insight-card--indigo {
+  border-color: rgba(129, 140, 248, 0.35);
+  background: linear-gradient(160deg, rgba(99, 102, 241, 0.12), #111827 55%);
+}
+
+.insight-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+}
+
+.insight-card > .muted {
+  flex: 1;
+  margin: 0;
+}
+
+.insight-card > .btn {
+  margin-top: auto;
+  align-self: flex-start;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.data-table th,
+.data-table td {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.data-table th {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.snapshot-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.snapshot-row {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.snapshot-row:last-child {
+  border-bottom: none;
 }
 
 .trash-btn-scan:hover:not(:disabled),
@@ -709,6 +1062,12 @@ nav {
 .alert-info {
   background: #172554;
   border: 1px solid #1d4ed8;
+}
+
+.alert-compact {
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 8px 10px;
 }
 
 .link-btn {

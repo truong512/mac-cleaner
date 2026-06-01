@@ -64,6 +64,25 @@ func (s *Service) SelectJunkSafeOnly() {
 	s.rebuildJunkSelectionLocked()
 }
 
+func (s *Service) SelectJunkByTags(tags []string) {
+	ids := s.catalog.CategoryIDsByTags(tags)
+	idSet := make(map[string]struct{}, len(ids))
+	for _, id := range ids {
+		idSet[id] = struct{}{}
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i := range s.lastJunkItems {
+		_, ok := idSet[s.lastJunkItems[i].Category]
+		s.lastJunkItems[i].Selected = ok
+	}
+	s.rebuildJunkSelectionLocked()
+}
+
+func (s *Service) FilterJunkCategoryIDsByTags(tags []string) []string {
+	return s.catalog.CategoryIDsByTags(tags)
+}
+
 func (s *Service) CleanupLastJunk() {
 	go s.runJunkCleanup()
 }

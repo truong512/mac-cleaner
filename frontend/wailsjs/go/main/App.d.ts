@@ -24,7 +24,15 @@ export function DeleteDuplicatePaths(arg1:Array<string>):Promise<void>;
 
 export function DeleteDuplicates(arg1:model.DuplicateDeleteRequest):Promise<void>;
 
+export function DeleteLocalSnapshots(arg1:Array<string>):Promise<void>;
+
+export function DockerIsAvailable():Promise<boolean>;
+
+export function DockerPrune(arg1:model.DockerPruneOptions,arg2:boolean):Promise<void>;
+
 export function ExecuteCleanup(arg1:Array<model.ScanItem>):Promise<model.CleanupReport>;
+
+export function FilterJunkCategoryIDsByTags(arg1:Array<string>):Promise<Array<string>>;
 
 export function ForceCleanup(arg1:Array<model.ScanItem>):Promise<void>;
 
@@ -46,6 +54,8 @@ export function GetCatalogCategories():Promise<Array<model.CategorySummary>>;
 
 export function GetDiskSummary():Promise<model.DiskSummary>;
 
+export function GetDockerDiskUsage():Promise<model.DockerDiskUsage>;
+
 export function GetJunkCategoryRows():Promise<Array<model.JunkCategoryRow>>;
 
 export function GetJunkSelectionSummary():Promise<model.SelectionSummary>;
@@ -66,11 +76,15 @@ export function GetRecentAuditLog(arg1:number):Promise<Array<model.AuditLogEntry
 
 export function GetSettings():Promise<model.AppSettings>;
 
+export function GetStorageInsights():Promise<Array<model.StorageInsight>>;
+
 export function GetTopFiles(arg1:string,arg2:number):Promise<Array<model.DirNode>>;
 
 export function ListApps():Promise<Array<model.InstalledApp>>;
 
 export function ListDiskChildren(arg1:string):Promise<Array<model.DirNode>>;
+
+export function ListLocalSnapshots(arg1:string):Promise<Array<model.LocalSnapshot>>;
 
 export function OpenAuditLog():Promise<void>;
 
@@ -111,6 +125,8 @@ export function SelectBigFilesArchivesOnly():Promise<void>;
 export function SelectBigFilesLargeOnly():Promise<void>;
 
 export function SelectBigFilesOnly(arg1:Array<model.ScanItem>):Promise<Array<model.ScanItem>>;
+
+export function SelectJunkByTags(arg1:Array<string>):Promise<void>;
 
 export function SelectJunkSafeOnly():Promise<void>;
 

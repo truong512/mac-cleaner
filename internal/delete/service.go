@@ -158,6 +158,10 @@ func (s *Service) deleteOne(path, category string) model.DeleteResult {
 	return res
 }
 
+func (s *Service) LogAction(path, category string, success bool, err error) {
+	s.logAudit(path, category, success, err)
+}
+
 func (s *Service) logAudit(path, category string, success bool, err error) {
 	rec := auditRecord{path: path, category: category, success: success, err: err}
 	select {
