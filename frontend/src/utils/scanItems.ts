@@ -50,10 +50,21 @@ export function collectDuplicatePathsToDelete(
 }
 
 export type CategoryRow = model.CategorySummary & {
+  selectedCount: number;
   allSelected: boolean;
 };
 
 /** Summarize categories and per-category selection in one pass. */
+export function filterItemsByCategory(
+  items: ScanItem[],
+  categoryId: string | null
+): ScanItem[] {
+  if (!categoryId) {
+    return items;
+  }
+  return items.filter((item) => item.category === categoryId);
+}
+
 export function buildCategoryRows(
   items: ScanItem[],
   selectedIds?: ReadonlySet<string>
@@ -85,6 +96,7 @@ export function buildCategoryRows(
   return Array.from(map.values())
     .map(({ selectedCount, ...cat }) => ({
       ...cat,
+      selectedCount,
       allSelected: cat.itemCount > 0 && selectedCount === cat.itemCount,
     }))
     .sort((a, b) => b.sizeBytes - a.sizeBytes);

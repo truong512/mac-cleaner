@@ -58,6 +58,10 @@ export function FormatBytes(arg1) {
   return window['go']['main']['App']['FormatBytes'](arg1);
 }
 
+export function GetAppIconDataURL(arg1) {
+  return window['go']['main']['App']['GetAppIconDataURL'](arg1);
+}
+
 export function GetAppLeftovers(arg1) {
   return window['go']['main']['App']['GetAppLeftovers'](arg1);
 }
@@ -134,6 +138,10 @@ export function ListApps() {
   return window['go']['main']['App']['ListApps']();
 }
 
+export function ListDiskChildren(arg1) {
+  return window['go']['main']['App']['ListDiskChildren'](arg1);
+}
+
 export function OpenAuditLog() {
   return window['go']['main']['App']['OpenAuditLog']();
 }
@@ -160,6 +168,10 @@ export function PreviewLastBigFiles() {
 
 export function PreviewLastJunk() {
   return window['go']['main']['App']['PreviewLastJunk']();
+}
+
+export function PruneDiskPath(arg1) {
+  return window['go']['main']['App']['PruneDiskPath'](arg1);
 }
 
 export function RefreshPermissions() {

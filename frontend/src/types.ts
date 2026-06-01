@@ -23,6 +23,10 @@ export type ScanProgress = {
   message?: string;
 };
 export type AppSettings = model.AppSettings;
-export type DeleteResult = model.DeleteResult;
+export type DeleteResult = {
+  path: string;
+  success: boolean;
+  error?: string;
+};
 
 export { model };

@@ -16,13 +16,14 @@ import { formatBytes } from '../utils/format';
 import {
   applyCategoryToSelectedIds,
   buildCategoryRows,
+  filterItemsByCategory,
   safeOnlySelectedIds,
   type CategoryRow,
 } from '../utils/scanItems';
+import { CategoryListPanel } from '../components/CategoryListPanel';
 import { usePageActive } from '../hooks/usePageActive';
 import { useJunkScanSelection } from '../hooks/useJunkScanSelection';
 import { useConfirmTrash } from '../hooks/useConfirmTrash';
-import { RiskBadge } from '../components/RiskBadge';
 import { VirtualScanFileList } from '../components/VirtualScanFileList';
 import { CleanupReportBanner } from '../components/CleanupReportBanner';
 import { ActionDock } from '../components/ActionDock';
@@ -43,6 +44,7 @@ export function JunkScan() {
   const [loading, setLoading] = useState(false);
   /** Remount virtual list when scan results are replaced (fixes row overlap after cleanup). */
   const [listGeneration, setListGeneration] = useState(0);
+  const [filterCategoryId, setFilterCategoryId] = useState<string | null>(null);
   const { running, percent, scanned, total, runTrashAction, cancelTrashAction } = useTrashButton();
   const { progress, active, kind } = useOperationProgress();
   const { requestConfirm, confirmDialog } = useConfirmTrash();
@@ -57,6 +59,7 @@ export function JunkScan() {
     selectedBytes,
   } = useJunkScanSelection(items, pageActive);
 
+  const filteredItems = filterItemsByCategory(deferredItems, filterCategoryId);
   const hasResults = items.length > 0;
   const scanRunning = loading || (active && kind === 'scan');
   const cleanRunning = running;
@@ -97,6 +100,7 @@ export function JunkScan() {
               risk: r.risk,
               itemCount: r.itemCount,
               sizeBytes: r.sizeBytes,
+              selectedCount: r.selectedCount,
               allSelected: r.allSelected,
             }))
           );
@@ -115,6 +119,7 @@ export function JunkScan() {
     try {
       const result = await ScanJunk();
       setJunk(result || []);
+      setFilterCategoryId(null);
       setListGeneration((g) => g + 1);
       setReport(null);
     } catch (e: any) {
@@ -229,31 +234,28 @@ export function JunkScan() {
         <div className="grid-2 grid-fill">
           <div className="card card-scroll">
             <h3>Categories</h3>
-            <div className="list">
-            {categories.map((cat) => (
-              <div key={cat.id} className="list-row">
-                <label className="checkbox-row">
-                  <input
-                    type="checkbox"
-                    checked={cat.allSelected}
-                    onChange={(e) => toggleCat(cat.id, e.target.checked)}
-                  />
-                  <span>{cat.label}</span>
-                </label>
-                <RiskBadge risk={cat.risk} />
-                <span className="muted">{cat.itemCount} items</span>
-                <strong>{formatBytes(cat.sizeBytes)}</strong>
-              </div>
-            ))}
-            {!categories.length && <p className="muted">Press Scan to find junk files.</p>}
-            </div>
+            <CategoryListPanel
+              categories={categories}
+              filterCategoryId={filterCategoryId}
+              onFilterChange={setFilterCategoryId}
+              onToggleCategory={toggleCat}
+              emptyMessage="Press Scan to find junk files."
+              totalItemCount={items.length}
+            />
           </div>
 
           <div className="card card-scroll">
-            <h3>Files{items.length > 0 ? ` (${items.length})` : ''}</h3>
+            <h3>
+              Files
+              {items.length > 0
+                ? filterCategoryId
+                  ? ` (${filteredItems.length} of ${items.length})`
+                  : ` (${items.length})`
+                : ''}
+            </h3>
             <VirtualScanFileList
-              key={listGeneration}
-              items={deferredItems}
+              key={`${listGeneration}-${filterCategoryId ?? 'all'}`}
+              items={filteredItems}
               isSelected={isSelected}
               onToggle={toggleItem}
             />

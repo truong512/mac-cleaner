@@ -30,6 +30,8 @@ export function ForceCleanup(arg1:Array<model.ScanItem>):Promise<void>;
 
 export function FormatBytes(arg1:number):Promise<string>;
 
+export function GetAppIconDataURL(arg1:string):Promise<string>;
+
 export function GetAppLeftovers(arg1:string):Promise<model.LeftoverGroup>;
 
 export function GetAuditLogPath():Promise<string>;
@@ -68,6 +70,8 @@ export function GetTopFiles(arg1:string,arg2:number):Promise<Array<model.DirNode
 
 export function ListApps():Promise<Array<model.InstalledApp>>;
 
+export function ListDiskChildren(arg1:string):Promise<Array<model.DirNode>>;
+
 export function OpenAuditLog():Promise<void>;
 
 export function OpenFullDiskAccessSettings():Promise<void>;
@@ -81,6 +85,8 @@ export function PreviewCleanup(arg1:Array<model.ScanItem>):Promise<model.Cleanup
 export function PreviewLastBigFiles():Promise<model.CleanupReport>;
 
 export function PreviewLastJunk():Promise<model.CleanupReport>;
+
+export function PruneDiskPath(arg1:string):Promise<model.DirNode>;
 
 export function RefreshPermissions():Promise<model.PermissionStatus>;
 
@@ -122,6 +128,6 @@ export function SetJunkItemSelected(arg1:string,arg2:boolean):Promise<void>;
 
 export function ToggleCategory(arg1:Array<model.ScanItem>,arg2:string,arg3:boolean):Promise<Array<model.ScanItem>>;
 
-export function TrashPath(arg1:string):Promise<model.DeleteResult>;
+export function TrashPath(arg1:string):Promise<void>;
 
 export function UninstallApp(arg1:model.UninstallSelection):Promise<void>;

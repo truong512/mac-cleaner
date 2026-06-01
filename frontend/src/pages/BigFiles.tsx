@@ -21,12 +21,13 @@ import {
   archivesOnlySelectedIds,
   bigFilesOnlySelectedIds,
   buildCategoryRows,
+  filterItemsByCategory,
   type CategoryRow,
 } from '../utils/scanItems';
+import { CategoryListPanel } from '../components/CategoryListPanel';
 import { usePageActive } from '../hooks/usePageActive';
 import { useBigFilesScanSelection } from '../hooks/useBigFilesScanSelection';
 import { useConfirmTrash } from '../hooks/useConfirmTrash';
-import { RiskBadge } from '../components/RiskBadge';
 import { VirtualScanFileList } from '../components/VirtualScanFileList';
 import { CleanupReportBanner } from '../components/CleanupReportBanner';
 import { FolderPathsField } from '../components/FolderPathsField';
@@ -48,6 +49,7 @@ export function BigFiles() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [listGeneration, setListGeneration] = useState(0);
+  const [filterCategoryId, setFilterCategoryId] = useState<string | null>(null);
   const [roots, setRoots] = useState('~/Documents\n~/Downloads\n~/Desktop');
   const [minSizeMB, setMinSizeMB] = useState(50);
   const [includeBigFiles, setIncludeBigFiles] = useState(true);
@@ -66,6 +68,7 @@ export function BigFiles() {
     selectedBytes,
   } = useBigFilesScanSelection(items, pageActive);
 
+  const filteredItems = filterItemsByCategory(deferredItems, filterCategoryId);
   const hasResults = items.length > 0;
   const scanRunning = loading || (active && kind === 'scan');
   const cleanRunning = running;
@@ -121,6 +124,7 @@ export function BigFiles() {
               risk: r.risk,
               itemCount: r.itemCount,
               sizeBytes: r.sizeBytes,
+              selectedCount: r.selectedCount,
               allSelected: r.allSelected,
             }))
           );
@@ -152,6 +156,7 @@ export function BigFiles() {
     try {
       const result = await ScanBigFiles(buildRequest());
       setBigFiles(result || []);
+      setFilterCategoryId(null);
       setListGeneration((g) => g + 1);
       setReport(null);
     } catch (e: any) {
@@ -310,31 +315,28 @@ export function BigFiles() {
         <div className="grid-2 grid-fill">
           <div className="card card-scroll">
             <h3>Categories</h3>
-            <div className="list">
-            {categories.map((cat) => (
-              <div key={cat.id} className="list-row">
-                <label className="checkbox-row">
-                  <input
-                    type="checkbox"
-                    checked={cat.allSelected}
-                    onChange={(e) => toggleCat(cat.id, e.target.checked)}
-                  />
-                  <span>{cat.label}</span>
-                </label>
-                <RiskBadge risk={cat.risk} />
-                <span className="muted">{cat.itemCount} items</span>
-                <strong>{formatBytes(cat.sizeBytes)}</strong>
-              </div>
-            ))}
-            {!categories.length && <p className="muted">Press Scan to find large and archive files.</p>}
-            </div>
+            <CategoryListPanel
+              categories={categories}
+              filterCategoryId={filterCategoryId}
+              onFilterChange={setFilterCategoryId}
+              onToggleCategory={toggleCat}
+              emptyMessage="Press Scan to find large and archive files."
+              totalItemCount={items.length}
+            />
           </div>
 
           <div className="card card-scroll">
-            <h3>Files{items.length > 0 ? ` (${items.length})` : ''}</h3>
+            <h3>
+              Files
+              {items.length > 0
+                ? filterCategoryId
+                  ? ` (${filteredItems.length} of ${items.length})`
+                  : ` (${items.length})`
+                : ''}
+            </h3>
             <VirtualScanFileList
-              key={listGeneration}
-              items={deferredItems}
+              key={`${listGeneration}-${filterCategoryId ?? 'all'}`}
+              items={filteredItems}
               isSelected={isSelected}
               onToggle={toggleItem}
             />
