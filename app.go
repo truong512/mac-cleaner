@@ -206,6 +206,10 @@ func (a *App) GetLastAppsScan() []model.InstalledApp {
 	return a.svc.GetLastAppsScan()
 }
 
+func (a *App) GetAppIconDataURL(appPath string) string {
+	return a.svc.GetAppIconDataURL(appPath)
+}
+
 func (a *App) GetAppLeftovers(appPath string) (model.LeftoverGroup, error) {
 	return a.svc.GetAppLeftovers(appPath)
 }
@@ -242,12 +246,20 @@ func (a *App) GetTopFiles(nodePath string, limit int) ([]model.DirNode, error) {
 	return a.svc.GetTopFiles(nodePath, limit)
 }
 
+func (a *App) ListDiskChildren(dirPath string) ([]model.DirNode, error) {
+	return a.svc.ListDiskChildren(dirPath)
+}
+
 func (a *App) RevealInFinder(path string) error {
 	return a.svc.RevealInFinder(path)
 }
 
-func (a *App) TrashPath(path string) model.DeleteResult {
-	return a.svc.TrashPath(path)
+func (a *App) TrashPath(path string) {
+	a.svc.TrashPath(path)
+}
+
+func (a *App) PruneDiskPath(path string) *model.DirNode {
+	return a.svc.PruneDiskPath(path)
 }
 
 func (a *App) GetAuditLogPath() string {

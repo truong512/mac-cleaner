@@ -95,6 +95,7 @@ func (s *Service) GetJunkCategoryRows() []model.JunkCategoryRow {
 	}
 	out := make([]model.JunkCategoryRow, 0, len(byID))
 	for _, a := range byID {
+		a.row.SelectedCount = a.selectedCount
 		a.row.AllSelected = a.row.ItemCount > 0 && a.selectedCount == a.row.ItemCount
 		out = append(out, a.row)
 	}

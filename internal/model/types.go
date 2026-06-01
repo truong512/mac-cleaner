@@ -29,12 +29,13 @@ type CategorySummary struct {
 }
 
 type JunkCategoryRow struct {
-	ID          string `json:"id"`
-	Label       string `json:"label"`
-	Risk        Risk   `json:"risk"`
-	ItemCount   int    `json:"itemCount"`
-	SizeBytes   int64  `json:"sizeBytes"`
-	AllSelected bool   `json:"allSelected"`
+	ID            string `json:"id"`
+	Label         string `json:"label"`
+	Risk          Risk   `json:"risk"`
+	ItemCount     int    `json:"itemCount"`
+	SizeBytes     int64  `json:"sizeBytes"`
+	SelectedCount int    `json:"selectedCount"`
+	AllSelected   bool   `json:"allSelected"`
 }
 
 type CleanupFailure struct {

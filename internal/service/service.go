@@ -41,6 +41,9 @@ type Service struct {
 	lastApps         []model.InstalledApp
 	lastDiskTree     *model.DirNode
 	lastDiskRoot     string
+
+	iconMu    sync.Mutex
+	iconCache map[string]string
 }
 
 func New() (*Service, error) {
@@ -52,6 +55,7 @@ func New() (*Service, error) {
 		deleteSvc: delete.NewService(),
 		scanEng:   scan.NewEngine(cat),
 		catalog:   cat,
+		iconCache: make(map[string]string),
 		settings: model.AppSettings{
 			DryRunDefault:    true,
 			ExcludeGlobs:     []string{},
@@ -366,6 +370,24 @@ func (s *Service) GetLastAppsScan() []model.InstalledApp {
 	return s.lastApps
 }
 
+func (s *Service) GetAppIconDataURL(appPath string) string {
+	s.iconMu.Lock()
+	if url, ok := s.iconCache[appPath]; ok {
+		s.iconMu.Unlock()
+		return url
+	}
+	s.iconMu.Unlock()
+
+	url, err := app.AppIconDataURL(appPath)
+	if err != nil || url == "" {
+		return ""
+	}
+	s.iconMu.Lock()
+	s.iconCache[appPath] = url
+	s.iconMu.Unlock()
+	return url
+}
+
 func (s *Service) GetAppLeftovers(appPath string) (model.LeftoverGroup, error) {
 	s.mu.Lock()
 	cached := s.lastApps
@@ -579,6 +601,20 @@ func (s *Service) GetLastDiskMap() model.DiskMapSnapshot {
 	}
 }
 
+func (s *Service) ListDiskChildren(dirPath string) ([]model.DirNode, error) {
+	return disk.ListChildren(dirPath)
+}
+
+func (s *Service) PruneDiskPath(path string) *model.DirNode {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.lastDiskTree == nil {
+		return nil
+	}
+	s.lastDiskTree = disk.PrunePath(s.lastDiskTree, path)
+	return s.lastDiskTree
+}
+
 func (s *Service) GetTopFiles(nodePath string, limit int) ([]model.DirNode, error) {
 	s.mu.Lock()
 	tree := s.lastDiskTree
@@ -593,21 +629,31 @@ func (s *Service) GetTopFiles(nodePath string, limit int) ([]model.DirNode, erro
 			return nil, fmt.Errorf("path not found in tree")
 		}
 	}
-	return disk.TopFiles(node, limit), nil
+	files := disk.TopFiles(node, limit)
+	if files == nil {
+		return []model.DirNode{}, nil
+	}
+	return files, nil
 }
 
 func (s *Service) RevealInFinder(path string) error {
 	return delete.RevealInFinder(path)
 }
 
-func (s *Service) TrashPath(path string) model.DeleteResult {
-	ctx, cancel := s.deleteCtx()
-	defer cancel()
-	results := s.deleteSvc.DeletePaths(ctx, []string{path}, "manual", s.emitDeleteProgress)
-	if len(results) == 0 {
-		return model.DeleteResult{Path: path, Success: false, Error: "no result"}
-	}
-	return results[0]
+func (s *Service) TrashPath(path string) {
+	go func() {
+		ctx, cancel := s.deleteCtx()
+		defer cancel()
+		results := s.deleteSvc.DeletePaths(ctx, []string{path}, "manual", s.emitDeleteProgress)
+		result := model.DeleteResult{Path: path, Success: false, Error: "no result"}
+		if len(results) > 0 {
+			result = results[0]
+		}
+		if ctx.Err() != nil {
+			s.emit("delete:cancelled", map[string]string{"message": "Delete cancelled"})
+		}
+		s.emit("trash:done", result)
+	}()
 }
 
 func (s *Service) GetAuditLogPath() string {

@@ -25,12 +25,14 @@ export function useTrashButton() {
 
     const offCleanup = EventsOn('cleanup:done', finish);
     const offUninstall = EventsOn('uninstall:done', finish);
+    const offTrash = EventsOn('trash:done', finish);
     const offCancelled = EventsOn('delete:cancelled', finish);
     const offProgress = EventsOn('delete:progress', onDeleteProgress);
 
     return () => {
       offCleanup();
       offUninstall();
+      offTrash();
       offCancelled();
       offProgress();
     };

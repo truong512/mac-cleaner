@@ -158,22 +158,6 @@ export namespace model {
 		    return a;
 		}
 	}
-	export class DeleteResult {
-	    path: string;
-	    success: boolean;
-	    error?: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new DeleteResult(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.path = source["path"];
-	        this.success = source["success"];
-	        this.error = source["error"];
-	    }
-	}
 	export class DirNode {
 	    name: string;
 	    path: string;
@@ -341,6 +325,7 @@ export namespace model {
 	    risk: string;
 	    itemCount: number;
 	    sizeBytes: number;
+	    selectedCount: number;
 	    allSelected: boolean;
 	
 	    static createFrom(source: any = {}) {
@@ -354,6 +339,7 @@ export namespace model {
 	        this.risk = source["risk"];
 	        this.itemCount = source["itemCount"];
 	        this.sizeBytes = source["sizeBytes"];
+	        this.selectedCount = source["selectedCount"];
 	        this.allSelected = source["allSelected"];
 	    }
 	}

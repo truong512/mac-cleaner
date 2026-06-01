@@ -12,6 +12,7 @@ import { useConfirmTrash } from '../hooks/useConfirmTrash';
 import { TrashButton } from '../components/TrashButton';
 import { ActionDock } from '../components/ActionDock';
 import { CleanupReportBanner } from '../components/CleanupReportBanner';
+import { AppIcon } from '../components/AppIcon';
 import { useTrashButton } from '../hooks/useTrashButton';
 import { useOperationProgress } from '../hooks/useScanProgress';
 import { useScanCache } from '../context/ScanCacheContext';
@@ -180,11 +181,12 @@ export function Applications() {
                 onClick={() => selectApp(app)}
                 disabled={!hasResults || scanRunning}
               >
-                <div>
+                <AppIcon appPath={app.path} name={app.name} />
+                <div className="app-row-meta">
                   <strong>{app.name}</strong>
                   <span className="muted">{app.version || app.bundleId}</span>
                 </div>
-                <span>{formatBytes(app.sizeBytes)}</span>
+                <span className="app-row-size">{formatBytes(app.sizeBytes)}</span>
               </button>
             ))}
             {!apps.length && !scanRunning && (
