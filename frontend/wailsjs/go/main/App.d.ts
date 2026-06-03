@@ -12,11 +12,11 @@ export function CancelOperation():Promise<void>;
 
 export function CancelScan():Promise<void>;
 
-export function CleanupLastBigFiles():Promise<void>;
+export function CleanupLastBigFiles(arg1:boolean):Promise<void>;
 
-export function CleanupLastDuplicates():Promise<void>;
+export function CleanupLastDuplicates(arg1:boolean):Promise<void>;
 
-export function CleanupLastJunk():Promise<void>;
+export function CleanupLastJunk(arg1:boolean):Promise<void>;
 
 export function CleanupPaths(arg1:Array<string>,arg2:string):Promise<void>;
 
@@ -29,6 +29,8 @@ export function DeleteLocalSnapshots(arg1:Array<string>):Promise<void>;
 export function DockerIsAvailable():Promise<boolean>;
 
 export function DockerPrune(arg1:model.DockerPruneOptions,arg2:boolean):Promise<void>;
+
+export function DownloadCatalogFromGit(arg1:string):Promise<void>;
 
 export function ExecuteCleanup(arg1:Array<model.ScanItem>):Promise<model.CleanupReport>;
 
@@ -51,6 +53,8 @@ export function GetBigFilesDefaults():Promise<model.BigFilesScanRequest>;
 export function GetBigFilesSelectionSummary():Promise<model.SelectionSummary>;
 
 export function GetCatalogCategories():Promise<Array<model.CategorySummary>>;
+
+export function GetCatalogInfo():Promise<model.CatalogInfo>;
 
 export function GetDiskSummary():Promise<model.DiskSummary>;
 
@@ -104,6 +108,8 @@ export function PruneDiskPath(arg1:string):Promise<model.DirNode>;
 
 export function RefreshPermissions():Promise<model.PermissionStatus>;
 
+export function ResetCatalog():Promise<void>;
+
 export function RevealInFinder(arg1:string):Promise<void>;
 
 export function SaveSettings(arg1:model.AppSettings):Promise<void>;
@@ -144,6 +150,6 @@ export function SetJunkItemSelected(arg1:string,arg2:boolean):Promise<void>;
 
 export function ToggleCategory(arg1:Array<model.ScanItem>,arg2:string,arg3:boolean):Promise<Array<model.ScanItem>>;
 
-export function TrashPath(arg1:string):Promise<void>;
+export function TrashPath(arg1:string,arg2:boolean):Promise<void>;
 
 export function UninstallApp(arg1:model.UninstallSelection):Promise<void>;

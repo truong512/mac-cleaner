@@ -18,6 +18,7 @@ import { model } from '../types';
 import { formatBytes } from '../utils/format';
 import {
   applyCategoryToSelectedIds,
+  applyIdsToSelectedIds,
   archivesOnlySelectedIds,
   bigFilesOnlySelectedIds,
   buildCategoryRows,
@@ -28,9 +29,10 @@ import { CategoryListPanel } from '../components/CategoryListPanel';
 import { usePageActive } from '../hooks/usePageActive';
 import { useBigFilesScanSelection } from '../hooks/useBigFilesScanSelection';
 import { useConfirmTrash } from '../hooks/useConfirmTrash';
+import { ScanFileListViewToggle } from '../components/ScanFileListViewToggle';
 import { VirtualScanFileList } from '../components/VirtualScanFileList';
+import { useScanFileListView } from '../hooks/useScanFileListView';
 import { CleanupReportBanner } from '../components/CleanupReportBanner';
-import { FolderPathsField } from '../components/FolderPathsField';
 import { ActionDock } from '../components/ActionDock';
 import { TrashButton } from '../components/TrashButton';
 import { useTrashButton } from '../hooks/useTrashButton';
@@ -42,6 +44,7 @@ const LARGE_SCAN = 5000;
 
 export function BigFiles() {
   const pageActive = usePageActive();
+  const { view: fileListView, setView: setFileListView } = useScanFileListView();
   const { bigFiles, setBigFiles, ensureBigFiles } = useScanCache();
   const items = bigFiles ?? [];
   const deferredItems = useDeferredValue(items);
@@ -50,7 +53,6 @@ export function BigFiles() {
   const [loading, setLoading] = useState(false);
   const [listGeneration, setListGeneration] = useState(0);
   const [filterCategoryId, setFilterCategoryId] = useState<string | null>(null);
-  const [roots, setRoots] = useState('~/Documents\n~/Downloads\n~/Desktop');
   const [minSizeMB, setMinSizeMB] = useState(50);
   const [includeBigFiles, setIncludeBigFiles] = useState(true);
   const [includeArchives, setIncludeArchives] = useState(true);
@@ -83,11 +85,9 @@ export function BigFiles() {
   }, []);
 
   useEffect(() => {
+    if (!pageActive) return;
     GetBigFilesDefaults()
       .then((defaults) => {
-        if (defaults.roots?.length) {
-          setRoots(defaults.roots.map((r) => r.replace(/^\/Users\/[^/]+/, '~')).join('\n'));
-        }
         if (defaults.minSizeBytes > 0) {
           setMinSizeMB(Math.round(defaults.minSizeBytes / MB));
         }
@@ -95,7 +95,7 @@ export function BigFiles() {
         setIncludeArchives(defaults.includeArchives ?? true);
       })
       .catch(() => {});
-  }, []);
+  }, [pageActive]);
 
   useEffect(() => {
     const onDone = (cleanupReport: CleanupReport) => {
@@ -138,13 +138,9 @@ export function BigFiles() {
   }, [pageActive, items, selectedIds, selectionRev, listGeneration]);
 
   function buildRequest(): model.BigFilesScanRequest {
-    const rootList = roots
-      .split('\n')
-      .map((r) => r.trim())
-      .filter(Boolean);
     return new model.BigFilesScanRequest({
-      roots: rootList,
-      minSizeBytes: Math.max(1, minSizeMB) * MB,
+      roots: [],
+      minSizeBytes: 0,
       includeBigFiles,
       includeArchives,
     });
@@ -173,14 +169,13 @@ export function BigFiles() {
 
   async function handleClean() {
     if (selectedCount === 0) return;
-    if (
-      !(await requestConfirm(
-        `Move ${selectedCount} selected item${selectedCount === 1 ? '' : 's'} (${formatBytes(selectedBytes)})`
-      ))
-    ) {
+    const choice = await requestConfirm(
+      `Remove ${selectedCount} selected item${selectedCount === 1 ? '' : 's'} (${formatBytes(selectedBytes)})`
+    );
+    if (!choice) {
       return;
     }
-    runTrashAction(() => CleanupLastBigFiles(), selectedCount);
+    runTrashAction(() => CleanupLastBigFiles(choice === 'permanent'), selectedCount);
   }
 
   function handlePrimaryAction() {
@@ -228,6 +223,14 @@ export function BigFiles() {
     SetBigFilesItemSelected(id, next);
   }
 
+  function toggleFolder(ids: string[], selected: boolean) {
+    setSelectedIds((prev) => applyIdsToSelectedIds(prev, ids, selected));
+    for (const id of ids) {
+      SetBigFilesItemSelected(id, selected);
+    }
+    bump();
+  }
+
   const actionDisabled =
     actionRunning
       ? false
@@ -240,7 +243,9 @@ export function BigFiles() {
       <header className="page-header">
         <div>
           <h1>Big Files & Archives</h1>
-          <p>Find large files and compressed archives taking up space</p>
+          <p>
+            Scans your home directory for large files and archives (minimum size in Settings)
+          </p>
         </div>
         {hasResults && (
           <button className="btn btn-secondary" onClick={() => runScan()} disabled={scanRunning}>
@@ -252,41 +257,24 @@ export function BigFiles() {
       {error && <div className="alert alert-error">{error}</div>}
 
       <div className="card">
-        <div className="grid-2">
-          <FolderPathsField
-            value={roots}
-            onChange={setRoots}
+        <label className="checkbox-row">
+          <input
+            type="checkbox"
+            checked={includeBigFiles}
+            onChange={(e) => setIncludeBigFiles(e.target.checked)}
             disabled={scanRunning}
           />
-          <div>
-            <label style={{ display: 'block', marginBottom: 12 }}>
-              <span className="field-label">Minimum file size (MB)</span>
-              <input
-                className="input"
-                type="number"
-                min={1}
-                value={minSizeMB}
-                onChange={(e) => setMinSizeMB(Number(e.target.value) || 50)}
-              />
-            </label>
-            <label className="checkbox-row">
-              <input
-                type="checkbox"
-                checked={includeBigFiles}
-                onChange={(e) => setIncludeBigFiles(e.target.checked)}
-              />
-              <span>Large files (≥ {minSizeMB} MB)</span>
-            </label>
-            <label className="checkbox-row" style={{ marginTop: 8 }}>
-              <input
-                type="checkbox"
-                checked={includeArchives}
-                onChange={(e) => setIncludeArchives(e.target.checked)}
-              />
-              <span>Archive files (.zip, .dmg, .pkg, …)</span>
-            </label>
-          </div>
-        </div>
+          <span>Large files (≥ {minSizeMB} MB)</span>
+        </label>
+        <label className="checkbox-row" style={{ marginTop: 8 }}>
+          <input
+            type="checkbox"
+            checked={includeArchives}
+            onChange={(e) => setIncludeArchives(e.target.checked)}
+            disabled={scanRunning}
+          />
+          <span>Archive files (.zip, .dmg, .pkg, …)</span>
+        </label>
       </div>
 
       {items.length > 0 && (
@@ -328,19 +316,26 @@ export function BigFiles() {
           </div>
 
           <div className="card card-scroll">
-            <h3>
-              Files
-              {items.length > 0
-                ? filterCategoryId
-                  ? ` (${filteredItems.length} of ${items.length})`
-                  : ` (${items.length})`
-                : ''}
-            </h3>
+            <div className="scan-files-header">
+              <h3>
+                Files
+                {items.length > 0
+                  ? filterCategoryId
+                    ? ` (${filteredItems.length} of ${items.length})`
+                    : ` (${items.length})`
+                    : ''}
+              </h3>
+              {filteredItems.length > 0 && (
+                <ScanFileListViewToggle value={fileListView} onChange={setFileListView} />
+              )}
+            </div>
             <VirtualScanFileList
-              key={`${listGeneration}-${filterCategoryId ?? 'all'}`}
+              key={`${listGeneration}-${filterCategoryId ?? 'all'}-${fileListView}`}
+              view={fileListView}
               items={filteredItems}
               isSelected={isSelected}
               onToggle={toggleItem}
+              onToggleFolder={toggleFolder}
             />
           </div>
         </div>

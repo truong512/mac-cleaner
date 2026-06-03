@@ -47,15 +47,64 @@ var sipDenylist = []string{
 }
 
 func Load() (*Catalog, error) {
+	path, err := UserCatalogPath()
+	if err != nil {
+		return loadEmbedded()
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return loadEmbedded()
+		}
+		return nil, err
+	}
+	return Parse(data)
+}
+
+func loadEmbedded() (*Catalog, error) {
 	data, err := catalogFS.ReadFile("catalog.yaml")
 	if err != nil {
 		return nil, err
 	}
+	return Parse(data)
+}
+
+// Parse unmarshals and validates catalog YAML.
+func Parse(data []byte) (*Catalog, error) {
 	var c Catalog
 	if err := yaml.Unmarshal(data, &c); err != nil {
+		return nil, fmt.Errorf("parse catalog: %w", err)
+	}
+	if err := validate(&c); err != nil {
 		return nil, err
 	}
 	return &c, nil
+}
+
+func validate(c *Catalog) error {
+	if c == nil || len(c.Categories) == 0 {
+		return fmt.Errorf("catalog must define at least one category")
+	}
+	seen := make(map[string]struct{}, len(c.Categories))
+	for i, cat := range c.Categories {
+		if strings.TrimSpace(cat.ID) == "" {
+			return fmt.Errorf("category %d: missing id", i)
+		}
+		if _, dup := seen[cat.ID]; dup {
+			return fmt.Errorf("duplicate category id %q", cat.ID)
+		}
+		seen[cat.ID] = struct{}{}
+		if strings.TrimSpace(cat.Label) == "" {
+			return fmt.Errorf("category %q: missing label", cat.ID)
+		}
+		if strings.TrimSpace(cat.Risk) == "" {
+			return fmt.Errorf("category %q: missing risk", cat.ID)
+		}
+		if len(cat.Paths) == 0 {
+			return fmt.Errorf("category %q: missing paths", cat.ID)
+		}
+	}
+	return nil
 }
 
 func (c *Catalog) CategoriesMeta() []model.CategorySummary {

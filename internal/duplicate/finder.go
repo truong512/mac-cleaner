@@ -6,7 +6,6 @@ import (
 	"io"
 	"io/fs"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -34,16 +33,20 @@ var defaultExcludes = []string{
 	"**/.DS_Store",
 }
 
+func DefaultRoots() ([]string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+	return []string{home}, nil
+}
+
 func Scan(ctx context.Context, roots []string, opts Options, onProgress ProgressFunc) ([]model.DuplicateGroup, error) {
 	if len(roots) == 0 {
-		home, err := os.UserHomeDir()
+		var err error
+		roots, err = DefaultRoots()
 		if err != nil {
 			return nil, err
-		}
-		roots = []string{
-			filepath.Join(home, "Documents"),
-			filepath.Join(home, "Downloads"),
-			filepath.Join(home, "Desktop"),
 		}
 	}
 
@@ -190,9 +193,10 @@ func Scan(ctx context.Context, roots []string, opts Options, onProgress Progress
 	wg.Wait()
 
 	sort.Slice(groups, func(i, j int) bool {
-		reclaimI := groups[i].SizeBytes * int64(len(groups[i].Paths)-1)
-		reclaimJ := groups[j].SizeBytes * int64(len(groups[j].Paths)-1)
-		return reclaimI > reclaimJ
+		if groups[i].SizeBytes != groups[j].SizeBytes {
+			return groups[i].SizeBytes > groups[j].SizeBytes
+		}
+		return len(groups[i].Paths) > len(groups[j].Paths)
 	})
 
 	emit(model.ScanProgress{

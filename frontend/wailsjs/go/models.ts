@@ -54,6 +54,26 @@ export namespace model {
 	        this.includeArchives = source["includeArchives"];
 	    }
 	}
+	export class CatalogInfo {
+	    source: string;
+	    path?: string;
+	    categoryCount: number;
+	    updatedAt?: string;
+	    defaultUrl: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new CatalogInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.source = source["source"];
+	        this.path = source["path"];
+	        this.categoryCount = source["categoryCount"];
+	        this.updatedAt = source["updatedAt"];
+	        this.defaultUrl = source["defaultUrl"];
+	    }
+	}
 	export class CategorySummary {
 	    id: string;
 	    label: string;
@@ -340,6 +360,7 @@ export namespace model {
 	}
 	export class DuplicateDeleteRequest {
 	    groups: DuplicateGroup[];
+	    permanent: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new DuplicateDeleteRequest(source);
@@ -348,6 +369,7 @@ export namespace model {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.groups = this.convertValues(source["groups"], DuplicateGroup);
+	        this.permanent = source["permanent"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -533,6 +555,7 @@ export namespace model {
 	export class UninstallSelection {
 	    appPath: string;
 	    leftoverPaths: string[];
+	    permanent: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new UninstallSelection(source);
@@ -542,6 +565,7 @@ export namespace model {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.appPath = source["appPath"];
 	        this.leftoverPaths = source["leftoverPaths"];
+	        this.permanent = source["permanent"];
 	    }
 	}
 

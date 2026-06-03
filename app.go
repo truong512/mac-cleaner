@@ -54,6 +54,18 @@ func (a *App) GetCatalogCategories() []model.CategorySummary {
 	return a.svc.GetCatalogCategories()
 }
 
+func (a *App) GetCatalogInfo() (model.CatalogInfo, error) {
+	return a.svc.GetCatalogInfo()
+}
+
+func (a *App) DownloadCatalogFromGit(url string) error {
+	return a.svc.DownloadCatalogFromGit(url)
+}
+
+func (a *App) ResetCatalog() error {
+	return a.svc.ResetCatalog()
+}
+
 func (a *App) ScanJunk() ([]model.ScanItem, error) {
 	return a.svc.ScanJunk()
 }
@@ -126,8 +138,8 @@ func (a *App) GetJunkCategoryRows() []model.JunkCategoryRow {
 	return a.svc.GetJunkCategoryRows()
 }
 
-func (a *App) CleanupLastJunk() {
-	a.svc.CleanupLastJunk()
+func (a *App) CleanupLastJunk(permanent bool) {
+	a.svc.CleanupLastJunk(permanent)
 }
 
 func (a *App) PreviewLastJunk() model.CleanupReport {
@@ -162,8 +174,8 @@ func (a *App) GetBigFilesCategoryRows() []model.JunkCategoryRow {
 	return a.svc.GetBigFilesCategoryRows()
 }
 
-func (a *App) CleanupLastBigFiles() {
-	a.svc.CleanupLastBigFiles()
+func (a *App) CleanupLastBigFiles(permanent bool) {
+	a.svc.CleanupLastBigFiles(permanent)
 }
 
 func (a *App) PreviewLastBigFiles() model.CleanupReport {
@@ -174,8 +186,8 @@ func (a *App) SetDuplicateKeepers(keepers map[string]string) {
 	a.svc.SetDuplicateKeepers(keepers)
 }
 
-func (a *App) CleanupLastDuplicates() {
-	a.svc.CleanupLastDuplicates()
+func (a *App) CleanupLastDuplicates(permanent bool) {
+	a.svc.CleanupLastDuplicates(permanent)
 }
 
 func (a *App) SelectSafeOnly(items []model.ScanItem) []model.ScanItem {
@@ -254,8 +266,8 @@ func (a *App) RevealInFinder(path string) error {
 	return a.svc.RevealInFinder(path)
 }
 
-func (a *App) TrashPath(path string) {
-	a.svc.TrashPath(path)
+func (a *App) TrashPath(path string, permanent bool) {
+	a.svc.TrashPath(path, permanent)
 }
 
 func (a *App) PruneDiskPath(path string) *model.DirNode {

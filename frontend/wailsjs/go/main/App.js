@@ -22,16 +22,16 @@ export function CancelScan() {
   return window['go']['main']['App']['CancelScan']();
 }
 
-export function CleanupLastBigFiles() {
-  return window['go']['main']['App']['CleanupLastBigFiles']();
+export function CleanupLastBigFiles(arg1) {
+  return window['go']['main']['App']['CleanupLastBigFiles'](arg1);
 }
 
-export function CleanupLastDuplicates() {
-  return window['go']['main']['App']['CleanupLastDuplicates']();
+export function CleanupLastDuplicates(arg1) {
+  return window['go']['main']['App']['CleanupLastDuplicates'](arg1);
 }
 
-export function CleanupLastJunk() {
-  return window['go']['main']['App']['CleanupLastJunk']();
+export function CleanupLastJunk(arg1) {
+  return window['go']['main']['App']['CleanupLastJunk'](arg1);
 }
 
 export function CleanupPaths(arg1, arg2) {
@@ -56,6 +56,10 @@ export function DockerIsAvailable() {
 
 export function DockerPrune(arg1, arg2) {
   return window['go']['main']['App']['DockerPrune'](arg1, arg2);
+}
+
+export function DownloadCatalogFromGit(arg1) {
+  return window['go']['main']['App']['DownloadCatalogFromGit'](arg1);
 }
 
 export function ExecuteCleanup(arg1) {
@@ -100,6 +104,10 @@ export function GetBigFilesSelectionSummary() {
 
 export function GetCatalogCategories() {
   return window['go']['main']['App']['GetCatalogCategories']();
+}
+
+export function GetCatalogInfo() {
+  return window['go']['main']['App']['GetCatalogInfo']();
 }
 
 export function GetDiskSummary() {
@@ -206,6 +214,10 @@ export function RefreshPermissions() {
   return window['go']['main']['App']['RefreshPermissions']();
 }
 
+export function ResetCatalog() {
+  return window['go']['main']['App']['ResetCatalog']();
+}
+
 export function RevealInFinder(arg1) {
   return window['go']['main']['App']['RevealInFinder'](arg1);
 }
@@ -286,8 +298,8 @@ export function ToggleCategory(arg1, arg2, arg3) {
   return window['go']['main']['App']['ToggleCategory'](arg1, arg2, arg3);
 }
 
-export function TrashPath(arg1) {
-  return window['go']['main']['App']['TrashPath'](arg1);
+export function TrashPath(arg1, arg2) {
+  return window['go']['main']['App']['TrashPath'](arg1, arg2);
 }
 
 export function UninstallApp(arg1) {

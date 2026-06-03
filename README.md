@@ -34,14 +34,15 @@ To build from source instead, see [Development](#development).
 - **Dashboard** — Disk usage summary, Full Disk Access status, and quick links to each tool
 - **Smart Scan** — YAML catalog-driven junk detection with risk tiers (`safe` → `manual`), category toggles, preview-before-delete, and “select safe only”
 - **Applications** — List third-party apps, scan Library leftovers, uninstall bundles, and unload matching LaunchAgents when removing plists
-- **Duplicates** — BLAKE3-based duplicate finder with keeper selection
-- **Big Files** — Scan configurable roots for files above a size threshold and/or archive types (zip, dmg, pkg, etc.), with bulk trash cleanup
+- **Duplicates** — BLAKE3-based duplicate finder in your home directory with keeper selection
+- **Big Files** — Scan your home directory for files above the size threshold in Settings and/or archive types (zip, dmg, pkg, etc.), with bulk trash cleanup
 - **Space Map** — Interactive ECharts treemap with drill-down, top-files list, and Reveal in Finder
 - **Smart Scan presets** — Filter categories by Developer, Browsers, Apple, or Photos & Mail tags
 - **Storage insights** — Dashboard cards for Photos library, Mail cache, and developer footprint (read-only)
 - **Local snapshots** — List and delete APFS local Time Machine snapshots (`tmutil`)
 - **Docker** — `docker system df` breakdown and prune with dry-run preview
 - **Safety** — Trash-first deletions (via Finder Trash), dry-run default, trash confirmation dialog, JSON audit log, path exclude globs in Settings (persisted to `~/Library/Application Support/mac-cleaner/settings.json`)
+- **Catalog updates** — Download the latest `catalog.yaml` scan definitions from GitHub (Settings → Scan definitions), or restore the built-in catalog
 
 ## Requirements
 
@@ -168,7 +169,7 @@ xcrun stapler staple mac-cleaner.dmg
 - [ ] Smart Scan finds junk and respects risk tiers
 - [ ] Dry-run cleanup does not delete files
 - [ ] Trash cleanup moves files to Finder Trash (with confirmation when enabled)
-- [ ] Big Files scan finds large files/archives in chosen roots
+- [ ] Big Files scan finds large files/archives in home directory
 - [ ] App uninstall removes bundle + selected leftovers
 - [ ] Duplicate scan finds known duplicate set
 - [ ] Space Map treemap drills down and reveals in Finder

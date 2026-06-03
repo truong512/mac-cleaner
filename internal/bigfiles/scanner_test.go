@@ -44,6 +44,23 @@ func TestScanFindsArchivesAndBigFiles(t *testing.T) {
 	}
 }
 
+func TestDefaultRootsIsHome(t *testing.T) {
+	roots, err := DefaultRoots()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(roots) != 1 {
+		t.Fatalf("expected 1 root, got %v", roots)
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if roots[0] != home {
+		t.Fatalf("DefaultRoots() = %q, want home %q", roots[0], home)
+	}
+}
+
 func TestScanRespectsIncludeFlags(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "data.zip"), []byte("x"), 0o644); err != nil {

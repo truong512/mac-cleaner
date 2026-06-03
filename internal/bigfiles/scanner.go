@@ -48,11 +48,7 @@ func DefaultRoots() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	return []string{
-		filepath.Join(home, "Documents"),
-		filepath.Join(home, "Downloads"),
-		filepath.Join(home, "Desktop"),
-	}, nil
+	return []string{home}, nil
 }
 
 func Scan(ctx context.Context, opts Options, onProgress ProgressFunc) ([]model.ScanItem, error) {

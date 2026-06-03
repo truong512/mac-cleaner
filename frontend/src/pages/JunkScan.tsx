@@ -21,6 +21,7 @@ import type { CleanupReport } from '../types';
 import { formatBytes } from '../utils/format';
 import {
   applyCategoryToSelectedIds,
+  applyIdsToSelectedIds,
   buildCategoryRows,
   filterItemsByCategory,
   safeOnlySelectedIds,
@@ -30,7 +31,9 @@ import { CategoryListPanel } from '../components/CategoryListPanel';
 import { usePageActive } from '../hooks/usePageActive';
 import { useJunkScanSelection } from '../hooks/useJunkScanSelection';
 import { useConfirmTrash } from '../hooks/useConfirmTrash';
+import { ScanFileListViewToggle } from '../components/ScanFileListViewToggle';
 import { VirtualScanFileList } from '../components/VirtualScanFileList';
+import { useScanFileListView } from '../hooks/useScanFileListView';
 import { CleanupReportBanner } from '../components/CleanupReportBanner';
 import { ActionDock } from '../components/ActionDock';
 import { TrashButton } from '../components/TrashButton';
@@ -42,6 +45,7 @@ const LARGE_SCAN = 5000;
 
 export function JunkScan() {
   const pageActive = usePageActive();
+  const { view: fileListView, setView: setFileListView } = useScanFileListView();
   const [searchParams, setSearchParams] = useSearchParams();
   const { junk, setJunk, ensureJunk } = useScanCache();
   const items = junk ?? [];
@@ -212,14 +216,13 @@ export function JunkScan() {
 
   async function handleClean() {
     if (selectedCount === 0) return;
-    if (
-      !(await requestConfirm(
-        `Move ${selectedCount} selected item${selectedCount === 1 ? '' : 's'} (${formatBytes(selectedBytes)})`
-      ))
-    ) {
+    const choice = await requestConfirm(
+      `Remove ${selectedCount} selected item${selectedCount === 1 ? '' : 's'} (${formatBytes(selectedBytes)})`
+    );
+    if (!choice) {
       return;
     }
-    runTrashAction(() => CleanupLastJunk(), selectedCount);
+    runTrashAction(() => CleanupLastJunk(choice === 'permanent'), selectedCount);
   }
 
   function handlePrimaryAction() {
@@ -262,6 +265,14 @@ export function JunkScan() {
     bump();
   }
 
+  function toggleFolder(ids: string[], selected: boolean) {
+    setSelectedIds((prev) => applyIdsToSelectedIds(prev, ids, selected));
+    for (const id of ids) {
+      SetJunkItemSelected(id, selected);
+    }
+    bump();
+  }
+
   const actionDisabled =
     actionRunning
       ? false
@@ -281,7 +292,7 @@ export function JunkScan() {
             Select Safe Only
           </button>
           {hasResults && (
-            <button className="btn btn-secondary" onClick={() => runScan()} disabled={scanRunning}>
+            <button className="btn btn-secondary" onClick={() => void runScan()} disabled={scanRunning}>
               Scan Again
             </button>
           )}
@@ -336,20 +347,27 @@ export function JunkScan() {
           </div>
 
           <div className="card card-scroll">
-            <h3>
-              Files
-              {items.length > 0
-                ? filterCategoryId
-                  ? ` (${filteredItems.length} of ${items.length})`
-                  : ` (${items.length})`
-                : ''}
-            </h3>
+            <div className="scan-files-header">
+              <h3>
+                Files
+                {items.length > 0
+                  ? filterCategoryId
+                    ? ` (${filteredItems.length} of ${items.length})`
+                    : ` (${items.length})`
+                  : ''}
+              </h3>
+              {filteredItems.length > 0 && (
+                <ScanFileListViewToggle value={fileListView} onChange={setFileListView} />
+              )}
+            </div>
             {filteredItems.length > 0 ? (
               <VirtualScanFileList
-                key={`${listGeneration}-${filterCategoryId ?? 'all'}-${activePresetId ?? 'all'}`}
+                key={`${listGeneration}-${filterCategoryId ?? 'all'}-${activePresetId ?? 'all'}-${fileListView}`}
+                view={fileListView}
                 items={filteredItems}
                 isSelected={isSelected}
                 onToggle={toggleItem}
+                onToggleFolder={toggleFolder}
               />
             ) : hasResults ? (
               <p className="muted">No files in this filter. Try another preset or clear the filter.</p>
