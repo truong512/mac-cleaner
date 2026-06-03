@@ -548,6 +548,27 @@ categories:
       - glob: "account-*/postbox/temp/**"
         min_age_days: 7
 
+  - id: zalo_cache
+    label: Zalo Cache
+    risk: safe
+    description: Zalo desktop client cache (not chat history or downloaded media; quit Zalo if files are locked)
+    paths:
+      - "~/Library/Caches/com.vng.zalo"
+      - "~/Library/Caches/com.zing.zalo"
+      - "~/Library/Caches/c0b20604.com.vng.zalo"
+      - "~/Library/Application Support/Zalo"
+    rules:
+      - glob: "**/*"
+        min_age_days: 1
+        exclude:
+          - "**/Partitions/**"
+      - glob: "**/Cache/**"
+        min_age_days: 0
+      - glob: "**/GPUCache/**"
+        min_age_days: 0
+      - glob: "**/Code Cache/**"
+        min_age_days: 0
+
   - id: steam_cache
     label: Steam Cache
     risk: safe

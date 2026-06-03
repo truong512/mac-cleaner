@@ -90,8 +90,9 @@ type LeftoverGroup struct {
 }
 
 type UninstallSelection struct {
-	AppPath      string   `json:"appPath"`
+	AppPath       string   `json:"appPath"`
 	LeftoverPaths []string `json:"leftoverPaths"`
+	Permanent     bool     `json:"permanent"`
 }
 
 type DuplicateGroup struct {
@@ -102,7 +103,8 @@ type DuplicateGroup struct {
 }
 
 type DuplicateDeleteRequest struct {
-	Groups []DuplicateGroup `json:"groups"`
+	Groups    []DuplicateGroup `json:"groups"`
+	Permanent bool             `json:"permanent"`
 }
 
 type DirNode struct {
@@ -144,6 +146,14 @@ type AppSettings struct {
 	DryRunDefault    bool     `json:"dryRunDefault"`
 	ExcludeGlobs     []string `json:"excludeGlobs"`
 	BigFilesMinBytes int64    `json:"bigFilesMinBytes"`
+}
+
+type CatalogInfo struct {
+	Source        string `json:"source"`
+	Path          string `json:"path,omitempty"`
+	CategoryCount int    `json:"categoryCount"`
+	UpdatedAt     string `json:"updatedAt,omitempty"`
+	DefaultURL    string `json:"defaultUrl"`
 }
 
 type LocalSnapshot struct {

@@ -97,7 +97,7 @@ func isDescendantPath(path, ancestor string) bool {
 	return strings.HasPrefix(path, prefix)
 }
 
-func (s *Service) deletePathsBulk(ctx context.Context, paths []string, defaultCategory string, categories map[string]string, onProgress ProgressFunc) []model.DeleteResult {
+func (s *Service) deletePathsBulk(ctx context.Context, paths []string, defaultCategory string, categories map[string]string, mode Mode, onProgress ProgressFunc) []model.DeleteResult {
 	paths = PrunePathsForDelete(paths)
 	total := len(paths)
 	if total == 0 {
@@ -105,7 +105,7 @@ func (s *Service) deletePathsBulk(ctx context.Context, paths []string, defaultCa
 		return nil
 	}
 
-	emitDeleteStarting(onProgress, total)
+	emitDeleteStarting(onProgress, total, mode)
 
 	workers := deleteWorkerCount()
 	jobs := make(chan string)
@@ -128,7 +128,7 @@ func (s *Service) deletePathsBulk(ctx context.Context, paths []string, defaultCa
 			return
 		}
 		lastEmit = now
-		emitDeleteProgress(onProgress, int(done), total, lastPath)
+		emitDeleteProgress(onProgress, int(done), total, lastPath, mode)
 	}
 
 	categoryFor := func(path string) string {
@@ -146,7 +146,7 @@ func (s *Service) deletePathsBulk(ctx context.Context, paths []string, defaultCa
 			if ctxErr := ctx.Err(); ctxErr != nil {
 				return
 			}
-			res := s.deleteOne(path, categoryFor(path))
+			res := s.deleteOne(path, categoryFor(path), mode)
 			resultsMu.Lock()
 			results = append(results, res)
 			resultsMu.Unlock()
@@ -174,25 +174,25 @@ func (s *Service) deletePathsBulk(ctx context.Context, paths []string, defaultCa
 		emitDeleteCancelled(onProgress, done, total)
 		return results
 	}
-	emitDeleteProgress(onProgress, total, total, "")
+	emitDeleteProgress(onProgress, total, total, "", mode)
 	emitDeleteDone(onProgress, total)
 	return results
 }
 
-func (s *Service) DeletePaths(ctx context.Context, paths []string, category string, onProgress ProgressFunc) []model.DeleteResult {
-	return s.deletePathsBulk(ctx, paths, category, nil, onProgress)
+func (s *Service) DeletePaths(ctx context.Context, paths []string, category string, mode Mode, onProgress ProgressFunc) []model.DeleteResult {
+	return s.deletePathsBulk(ctx, paths, category, nil, mode, onProgress)
 }
 
-func (s *Service) DeletePathsWithCategories(ctx context.Context, paths []string, category string, categories map[string]string, onProgress ProgressFunc) []model.DeleteResult {
-	return s.deletePathsBulk(ctx, paths, category, categories, onProgress)
+func (s *Service) DeletePathsWithCategories(ctx context.Context, paths []string, category string, categories map[string]string, mode Mode, onProgress ProgressFunc) []model.DeleteResult {
+	return s.deletePathsBulk(ctx, paths, category, categories, mode, onProgress)
 }
 
-func (s *Service) deleteItemsWithProgress(ctx context.Context, items []model.ScanItem, onProgress ProgressFunc) []model.DeleteResult {
+func (s *Service) deleteItemsWithProgress(ctx context.Context, items []model.ScanItem, mode Mode, onProgress ProgressFunc) []model.DeleteResult {
 	paths := make([]string, 0, len(items))
 	categories := make(map[string]string, len(items))
 	for _, item := range items {
 		paths = append(paths, item.Path)
 		categories[item.Path] = item.Category
 	}
-	return s.deletePathsBulk(ctx, paths, "cleanup", categories, onProgress)
+	return s.deletePathsBulk(ctx, paths, "cleanup", categories, mode, onProgress)
 }

@@ -132,6 +132,22 @@ export function applyCategoryToSelectedIds(
   return next;
 }
 
+export function applyIdsToSelectedIds(
+  selectedIds: Set<string>,
+  ids: readonly string[],
+  selected: boolean
+): Set<string> {
+  const next = new Set(selectedIds);
+  for (const id of ids) {
+    if (selected) {
+      next.add(id);
+    } else {
+      next.delete(id);
+    }
+  }
+  return next;
+}
+
 export function safeOnlySelectedIds(items: ScanItem[]): Set<string> {
   const next = new Set<string>();
   for (const item of items) {

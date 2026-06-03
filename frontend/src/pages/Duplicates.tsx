@@ -1,7 +1,7 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import {
   CancelScan,
-  CleanupLastDuplicates,
+  DeleteDuplicates,
   ScanDuplicates,
   SetDuplicateKeepers,
 } from '../../wailsjs/go/main/App';
@@ -10,33 +10,34 @@ import type { CleanupReport } from '../types';
 import { model } from '../types';
 import { formatBytes } from '../utils/format';
 import { useConfirmTrash } from '../hooks/useConfirmTrash';
-import { VirtualDuplicateGroupList } from '../components/VirtualDuplicateGroupList';
+import { DuplicateGroupListPanel } from '../components/DuplicateGroupListPanel';
+import { DuplicateGroupDetailPanel } from '../components/DuplicateGroupDetailPanel';
 import { CleanupReportBanner } from '../components/CleanupReportBanner';
-import { FolderPathsField } from '../components/FolderPathsField';
 import { ActionDock } from '../components/ActionDock';
 import { TrashButton } from '../components/TrashButton';
 import { useTrashButton } from '../hooks/useTrashButton';
 import { useOperationProgress } from '../hooks/useScanProgress';
 import { useScanCache } from '../context/ScanCacheContext';
-import { usePageActive } from '../hooks/usePageActive';
 
-function countExtras(groups: model.DuplicateGroup[], keepers: Record<string, string>): number {
-  return groups.reduce((sum, g) => {
-    const keeper = keepers[g.hash] || g.keeper;
-    return sum + (g.paths || []).filter((p) => p !== keeper).length;
-  }, 0);
+function extrasInGroup(g: model.DuplicateGroup, keeper: string): number {
+  return (g.paths || []).filter((p) => p !== keeper).length;
+}
+
+function reclaimableInGroup(g: model.DuplicateGroup, keeper: string): number {
+  return g.sizeBytes * extrasInGroup(g, keeper);
 }
 
 export function Duplicates() {
-  const pageActive = usePageActive();
   const { duplicates, setDuplicates, setDuplicateKeepers, ensureDuplicates } = useScanCache();
   const groups = duplicates?.groups ?? [];
   const deferredGroups = useDeferredValue(groups);
   const keepers = duplicates?.keepers ?? {};
-  const [roots, setRoots] = useState('~/Documents\n~/Downloads\n~/Desktop');
   const [error, setError] = useState('');
   const [report, setReport] = useState<CleanupReport | null>(null);
   const [loading, setLoading] = useState(false);
+  const [selectedHash, setSelectedHash] = useState<string | null>(null);
+  const [checkedHashes, setCheckedHashes] = useState<Set<string>>(() => new Set());
+  const cleaningHashesRef = useRef<Set<string>>(new Set());
   const { running, percent, scanned, total, runTrashAction, cancelTrashAction } = useTrashButton();
   const { progress, active, kind } = useOperationProgress();
   const { requestConfirm, confirmDialog } = useConfirmTrash();
@@ -50,48 +51,84 @@ export function Duplicates() {
   const actionScanned = cleanRunning ? scanned : progress?.scanned ?? 0;
   const actionTotal = cleanRunning ? total : progress?.total ?? 0;
 
-  const reclaimable = useMemo(() => {
-    if (!pageActive) return 0;
-    return deferredGroups.reduce((sum, g) => {
-      const keeper = keepers[g.hash] || g.keeper;
-      const extras = (g.paths || []).filter((p: string) => p !== keeper).length;
-      return sum + g.sizeBytes * extras;
-    }, 0);
-  }, [deferredGroups, keepers, pageActive]);
+  const selectedGroup =
+    groups.find((g) => g.hash === selectedHash) ?? (groups.length > 0 ? groups[0] : null);
 
-  const extraCountRef = useRef(0);
-  const extraCount = useMemo(() => {
-    if (!pageActive) {
-      return extraCountRef.current;
+  const { checkedCount, checkedExtras, checkedBytes } = useMemo(() => {
+    let count = 0;
+    let extras = 0;
+    let bytes = 0;
+    for (const g of groups) {
+      if (!checkedHashes.has(g.hash)) continue;
+      count++;
+      const keeper = keepers[g.hash] || g.keeper;
+      const n = extrasInGroup(g, keeper);
+      extras += n;
+      bytes += reclaimableInGroup(g, keeper);
     }
-    const n = countExtras(deferredGroups, keepers);
-    extraCountRef.current = n;
-    return n;
-  }, [deferredGroups, keepers, pageActive]);
+    return { checkedCount: count, checkedExtras: extras, checkedBytes: bytes };
+  }, [groups, checkedHashes, keepers]);
 
   useEffect(() => {
     void ensureDuplicates();
   }, []);
 
   useEffect(() => {
+    if (groups.length === 0) {
+      setSelectedHash(null);
+      setCheckedHashes(new Set());
+      return;
+    }
+    if (!selectedHash || !groups.some((g) => g.hash === selectedHash)) {
+      setSelectedHash(groups[0].hash);
+    }
+    setCheckedHashes((prev) => {
+      const next = new Set<string>();
+      for (const h of prev) {
+        if (groups.some((g) => g.hash === h)) {
+          next.add(h);
+        }
+      }
+      return next;
+    });
+  }, [groups, selectedHash]);
+
+  useEffect(() => {
     const onDone = (cleanupReport: CleanupReport) => {
       setReport(cleanupReport);
       setError('');
+      const cleaned = cleaningHashesRef.current;
+      cleaningHashesRef.current = new Set();
+      if (cleaned.size === 0 || cleanupReport.deleted === 0 || cleanupReport.failed > 0) {
+        return;
+      }
+      const nextGroups = groups.filter((g) => !cleaned.has(g.hash));
+      const nextKeepers = { ...keepers };
+      for (const h of cleaned) {
+        delete nextKeepers[h];
+      }
+      setDuplicates(nextGroups, nextKeepers);
+      SetDuplicateKeepers(nextKeepers);
+      setCheckedHashes((prev) => {
+        const next = new Set(prev);
+        for (const h of cleaned) {
+          next.delete(h);
+        }
+        return next;
+      });
     };
     return EventsOn('cleanup:done', onDone);
-  }, []);
+  }, [groups, keepers, setDuplicates]);
 
   async function runScan() {
     setError('');
     setLoading(true);
     try {
-      const rootList = roots
-        .split('\n')
-        .map((r) => r.trim())
-        .filter(Boolean);
-      const result = await ScanDuplicates(rootList);
+      const result = await ScanDuplicates([]);
       const list = result || [];
       setDuplicates(list);
+      setSelectedHash(list[0]?.hash ?? null);
+      setCheckedHashes(new Set());
       SetDuplicateKeepers(
         Object.fromEntries(list.map((g) => [g.hash, g.keeper]))
       );
@@ -102,46 +139,76 @@ export function Duplicates() {
     }
   }
 
-  async function handleClean() {
-    if (extraCount === 0) {
-      setError('No duplicate copies selected for removal.');
+  function toggleGroupCheck(hash: string, checked: boolean) {
+    setCheckedHashes((prev) => {
+      const next = new Set(prev);
+      if (checked) {
+        next.add(hash);
+      } else {
+        next.delete(hash);
+      }
+      return next;
+    });
+  }
+
+  async function handleCleanChecked() {
+    const checked = groups.filter((g) => checkedHashes.has(g.hash));
+    if (!checked.length) {
       return;
     }
-    if (
-      !(await requestConfirm(
-        `Remove ${extraCount} duplicate file${extraCount === 1 ? '' : 's'} (${formatBytes(reclaimable)})`
-      ))
-    ) {
+    if (checkedExtras === 0) {
+      setError('No duplicate copies to remove in selected groups.');
+      return;
+    }
+    const choice = await requestConfirm(
+      `Remove ${checkedExtras} duplicate file${checkedExtras === 1 ? '' : 's'} from ${checked.length} group${checked.length === 1 ? '' : 's'} (${formatBytes(checkedBytes)})`
+    );
+    if (!choice) {
       return;
     }
     setError('');
     setReport(null);
     SetDuplicateKeepers(keepers);
-    runTrashAction(() => CleanupLastDuplicates(), extraCount);
+    const payload = model.DuplicateDeleteRequest.createFrom({
+      groups: checked.map((g) =>
+        model.DuplicateGroup.createFrom({
+          hash: g.hash,
+          sizeBytes: g.sizeBytes,
+          paths: g.paths,
+          keeper: keepers[g.hash] || g.keeper,
+        })
+      ),
+      permanent: choice === 'permanent',
+    });
+    cleaningHashesRef.current = new Set(checked.map((g) => g.hash));
+    runTrashAction(() => DeleteDuplicates(payload), checkedExtras);
   }
 
   function handlePrimaryAction() {
     if (actionRunning) {
-      if (cleanRunning) cancelTrashAction();
-      else CancelScan();
+      if (cleanRunning) {
+        cancelTrashAction();
+      } else {
+        CancelScan();
+      }
       return;
     }
-    if (!hasResults) {
-      void runScan();
+    if (mode === 'clean') {
+      void handleCleanChecked();
       return;
     }
-    void handleClean();
+    void runScan();
   }
 
   const actionDisabled =
-    actionRunning ? false : mode === 'clean' ? extraCount === 0 : false;
+    actionRunning ? false : mode === 'clean' ? checkedCount === 0 || checkedExtras === 0 : scanRunning;
 
   return (
     <div className="page page-with-dock">
       <header className="page-header">
         <div>
           <h1>Duplicates</h1>
-          <p>Find identical files and remove extra copies</p>
+          <p>Scans your home directory for identical files — remove extra copies</p>
         </div>
         {hasResults && (
           <button className="btn btn-secondary" onClick={() => runScan()} disabled={scanRunning}>
@@ -153,31 +220,49 @@ export function Duplicates() {
       {error && <div className="alert alert-error">{error}</div>}
       {report && <CleanupReportBanner report={report} onDismiss={() => setReport(null)} />}
 
-      <div className="card">
-        <FolderPathsField value={roots} onChange={setRoots} disabled={scanRunning} />
-      </div>
-
       {groups.length > 0 && (
         <div className="toolbar card">
           <span>
-            <strong>{groups.length}</strong> duplicate groups ·{' '}
-            <strong>{extraCount}</strong> copies to remove · reclaim up to{' '}
-            <strong>{formatBytes(reclaimable)}</strong>
+            <strong>{checkedCount}</strong> group{checkedCount === 1 ? '' : 's'} selected ·{' '}
+            {formatBytes(checkedBytes)} to reclaim
           </span>
         </div>
       )}
 
       <div className="page-body">
         {groups.length > 0 ? (
-          <VirtualDuplicateGroupList
-            groups={deferredGroups}
-            keepers={keepers}
-            onSelectKeeper={(hash, path) => {
-              const next = { ...keepers, [hash]: path };
-              setDuplicateKeepers(next);
-              SetDuplicateKeepers(next);
-            }}
-          />
+          <div className="grid-2 grid-fill">
+            <div className="card card-scroll">
+              <h3>Groups ({groups.length})</h3>
+              <DuplicateGroupListPanel
+                groups={deferredGroups}
+                keepers={keepers}
+                selectedHash={selectedGroup?.hash ?? null}
+                checkedHashes={checkedHashes}
+                onSelect={setSelectedHash}
+                onToggleCheck={toggleGroupCheck}
+              />
+            </div>
+
+            <div className="card card-scroll">
+              <h3>Details</h3>
+              {selectedGroup ? (
+                <div className="scroll-pane dup-detail-scroll">
+                  <DuplicateGroupDetailPanel
+                    group={selectedGroup}
+                    keeper={keepers[selectedGroup.hash] || selectedGroup.keeper}
+                    onSelectKeeper={(path) => {
+                      const next = { ...keepers, [selectedGroup.hash]: path };
+                      setDuplicateKeepers(next);
+                      SetDuplicateKeepers(next);
+                    }}
+                  />
+                </div>
+              ) : (
+                <p className="muted">Select a group</p>
+              )}
+            </div>
+          </div>
         ) : (
           !loading && <p className="muted dup-empty">Press Scan to find duplicate files.</p>
         )}

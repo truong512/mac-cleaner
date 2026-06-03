@@ -1,12 +1,18 @@
 import { useEffect, useState } from 'react';
 import {
+  DownloadCatalogFromGit,
   GetAuditLogPath,
+  GetCatalogInfo,
   GetSettings,
   OpenFullDiskAccessSettings,
   RefreshPermissions,
+  ResetCatalog,
   SaveSettings,
 } from '../../wailsjs/go/main/App';
 import type { AppSettings, PermissionStatus } from '../types';
+import type { model } from '../types';
+
+type CatalogInfo = model.CatalogInfo;
 
 export function SettingsPage() {
   const [settings, setSettings] = useState<AppSettings>({
@@ -18,6 +24,15 @@ export function SettingsPage() {
   const [excludeText, setExcludeText] = useState('');
   const [auditPath, setAuditPath] = useState('');
   const [saved, setSaved] = useState(false);
+  const [catalogInfo, setCatalogInfo] = useState<CatalogInfo | null>(null);
+  const [catalogBusy, setCatalogBusy] = useState(false);
+  const [catalogMsg, setCatalogMsg] = useState<string | null>(null);
+  const [catalogErr, setCatalogErr] = useState<string | null>(null);
+
+  async function refreshCatalogInfo() {
+    const info = await GetCatalogInfo();
+    setCatalogInfo(info);
+  }
 
   useEffect(() => {
     GetSettings().then((s) => {
@@ -26,7 +41,38 @@ export function SettingsPage() {
     });
     RefreshPermissions().then(setPerm);
     GetAuditLogPath().then(setAuditPath);
+    void refreshCatalogInfo();
   }, []);
+
+  async function downloadCatalog() {
+    setCatalogBusy(true);
+    setCatalogMsg(null);
+    setCatalogErr(null);
+    try {
+      await DownloadCatalogFromGit('');
+      await refreshCatalogInfo();
+      setCatalogMsg('Catalog downloaded from GitHub. Run Smart Scan again to use the new rules.');
+    } catch (e) {
+      setCatalogErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setCatalogBusy(false);
+    }
+  }
+
+  async function resetCatalog() {
+    setCatalogBusy(true);
+    setCatalogMsg(null);
+    setCatalogErr(null);
+    try {
+      await ResetCatalog();
+      await refreshCatalogInfo();
+      setCatalogMsg('Restored built-in catalog.');
+    } catch (e) {
+      setCatalogErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setCatalogBusy(false);
+    }
+  }
 
   async function save() {
     const next: AppSettings = {
@@ -111,6 +157,50 @@ export function SettingsPage() {
             <button className="btn btn-secondary" onClick={() => RefreshPermissions().then(setPerm)}>
               Re-check
             </button>
+          </div>
+        </div>
+
+        <div className="card">
+          <h3>Scan definitions</h3>
+          <p className="muted">
+            Smart Scan uses <code>catalog.yaml</code>. Download the latest definition from the project
+            repository on GitHub, or restore the copy bundled with this app.
+          </p>
+          {catalogInfo && (
+            <ul className="muted" style={{ margin: '12px 0', paddingLeft: 20 }}>
+              <li>
+                Active: <strong>{catalogInfo.source === 'custom' ? 'Downloaded' : 'Built-in'}</strong>
+              </li>
+              <li>Categories: {catalogInfo.categoryCount}</li>
+              {catalogInfo.updatedAt && <li>Updated: {catalogInfo.updatedAt}</li>}
+              {catalogInfo.path && (
+                <li>
+                  File: <code className="code-block" style={{ display: 'inline', padding: '2px 6px' }}>{catalogInfo.path}</code>
+                </li>
+              )}
+            </ul>
+          )}
+          {catalogMsg && <div className="alert alert-info alert-compact">{catalogMsg}</div>}
+          {catalogErr && <div className="alert alert-warning alert-compact">{catalogErr}</div>}
+          <div className="btn-row">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              disabled={catalogBusy}
+              onClick={() => void downloadCatalog()}
+            >
+              {catalogBusy ? 'Working…' : 'Download from GitHub'}
+            </button>
+            {catalogInfo?.source === 'custom' && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                disabled={catalogBusy}
+                onClick={() => void resetCatalog()}
+              >
+                Use built-in catalog
+              </button>
+            )}
           </div>
         </div>
 

@@ -301,11 +301,11 @@ func (s *Service) ExecuteCleanup(items []model.ScanItem) model.CleanupReport {
 
 func (s *Service) ForceCleanup(items []model.ScanItem) {
 	paths, categories := selectedPathsAndCategories(items)
-	s.cleanupPathsAsync(paths, categories, "cleanup")
+	s.cleanupPathsAsync(paths, categories, "cleanup", false)
 }
 
 func (s *Service) CleanupPaths(paths []string, category string) {
-	s.cleanupPathsAsync(paths, nil, category)
+	s.cleanupPathsAsync(paths, nil, category, false)
 }
 
 func selectedPathsAndCategories(items []model.ScanItem) ([]string, map[string]string) {
@@ -321,11 +321,12 @@ func selectedPathsAndCategories(items []model.ScanItem) ([]string, map[string]st
 	return paths, categories
 }
 
-func (s *Service) cleanupPathsAsync(paths []string, categories map[string]string, category string) {
+func (s *Service) cleanupPathsAsync(paths []string, categories map[string]string, category string, permanent bool) {
+	mode := deleteMode(permanent)
 	go func() {
 		ctx, cancel := s.deleteCtx()
 		defer cancel()
-		results := s.deleteSvc.DeletePathsWithCategories(ctx, paths, category, categories, s.emitDeleteProgress)
+		results := s.deleteSvc.DeletePathsWithCategories(ctx, paths, category, categories, mode, s.emitDeleteProgress)
 		report := s.reportFromResults(results)
 		if ctx.Err() != nil {
 			s.emit("delete:cancelled", map[string]string{"message": "Delete cancelled"})
@@ -483,17 +484,18 @@ func (s *Service) UninstallApp(sel model.UninstallSelection) error {
 		}
 
 		total := len(paths)
+		mode := deleteMode(sel.Permanent)
 		s.emitDeleteProgress(model.ScanProgress{
 			Phase:   "deleting",
 			Scanned: 0,
 			Total:   int64(total),
 			Percent: 0,
-			Message: fmt.Sprintf("Moving to Trash (0 of %d)...", total),
+			Message: mode.StartingMessage(total),
 		})
 
 		ctx, cancel := s.deleteCtx()
 		defer cancel()
-		results := s.deleteSvc.DeletePaths(ctx, paths, "app_uninstall", s.emitDeleteProgress)
+		results := s.deleteSvc.DeletePaths(ctx, paths, "app_uninstall", mode, s.emitDeleteProgress)
 		report := s.reportFromResults(results)
 		if ctx.Err() != nil {
 			s.emit("delete:cancelled", map[string]string{"message": "Delete cancelled"})
@@ -552,11 +554,11 @@ func (s *Service) DeleteDuplicates(req model.DuplicateDeleteRequest) {
 	for _, g := range req.Groups {
 		paths = append(paths, duplicate.PathsToDelete(g)...)
 	}
-	s.cleanupPathsAsync(paths, nil, "duplicates")
+	s.cleanupPathsAsync(paths, nil, "duplicates", req.Permanent)
 }
 
 func (s *Service) DeleteDuplicatePaths(paths []string) {
-	s.cleanupPathsAsync(paths, nil, "duplicates")
+	s.cleanupPathsAsync(paths, nil, "duplicates", false)
 }
 
 func keepersFromDuplicateGroups(groups []model.DuplicateGroup) map[string]string {
@@ -642,11 +644,12 @@ func (s *Service) RevealInFinder(path string) error {
 	return delete.RevealInFinder(path)
 }
 
-func (s *Service) TrashPath(path string) {
+func (s *Service) TrashPath(path string, permanent bool) {
+	mode := deleteMode(permanent)
 	go func() {
 		ctx, cancel := s.deleteCtx()
 		defer cancel()
-		results := s.deleteSvc.DeletePaths(ctx, []string{path}, "manual", s.emitDeleteProgress)
+		results := s.deleteSvc.DeletePaths(ctx, []string{path}, "manual", mode, s.emitDeleteProgress)
 		result := model.DeleteResult{Path: path, Success: false, Error: "no result"}
 		if len(results) > 0 {
 			result = results[0]

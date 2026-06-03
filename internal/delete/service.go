@@ -83,11 +83,11 @@ func (s *Service) Execute(ctx context.Context, items []model.ScanItem, dryRun bo
 			selected = append(selected, item)
 		}
 	}
-	results := s.deleteItemsWithProgress(ctx, selected, onProgress)
+	results := s.deleteItemsWithProgress(ctx, selected, ModeTrash, onProgress)
 	return s.buildReport(items, false, results)
 }
 
-func emitDeleteStarting(onProgress ProgressFunc, total int) {
+func emitDeleteStarting(onProgress ProgressFunc, total int, mode Mode) {
 	if onProgress == nil || total == 0 {
 		return
 	}
@@ -96,11 +96,11 @@ func emitDeleteStarting(onProgress ProgressFunc, total int) {
 		Scanned: 0,
 		Total:   int64(total),
 		Percent: 0,
-		Message: fmt.Sprintf("Moving to Trash (0 of %d)...", total),
+		Message: mode.StartingMessage(total),
 	})
 }
 
-func emitDeleteProgress(onProgress ProgressFunc, completed, total int, path string) {
+func emitDeleteProgress(onProgress ProgressFunc, completed, total int, path string, mode Mode) {
 	if onProgress == nil || total == 0 {
 		return
 	}
@@ -111,7 +111,7 @@ func emitDeleteProgress(onProgress ProgressFunc, completed, total int, path stri
 		Scanned:     int64(completed),
 		Total:       int64(total),
 		Percent:     percent,
-		Message:     fmt.Sprintf("Moving to Trash (%d of %d)...", completed, total),
+		Message:     mode.ProgressMessage(completed, total),
 	})
 }
 
@@ -145,9 +145,26 @@ func emitDeleteCancelled(onProgress ProgressFunc, done, total int) {
 	})
 }
 
-func (s *Service) deleteOne(path, category string) model.DeleteResult {
+func DeletePermanent(path string) error {
+	_, err := os.Lstat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	return os.RemoveAll(path)
+}
+
+func (s *Service) deleteOne(path, category string, mode Mode) model.DeleteResult {
 	res := model.DeleteResult{Path: path}
-	if err := MoveToTrash(path); err != nil {
+	var err error
+	if mode == ModePermanent {
+		err = DeletePermanent(path)
+	} else {
+		err = MoveToTrash(path)
+	}
+	if err != nil {
 		res.Success = false
 		res.Error = err.Error()
 		s.logAudit(path, category, false, err)

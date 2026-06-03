@@ -57,7 +57,7 @@ func TestDeleteProgress(t *testing.T) {
 		phases = append(phases, p.Phase)
 	}
 
-	results := svc.DeletePaths(context.Background(), nil, "test", progress)
+	results := svc.DeletePaths(context.Background(), nil, "test", delete.ModeTrash, progress)
 	if len(results) != 0 {
 		t.Fatalf("expected no results, got %d", len(results))
 	}

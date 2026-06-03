@@ -2,11 +2,12 @@ import { useEffect } from 'react';
 
 interface Props {
   summary: string;
-  onConfirm: () => void;
+  onMoveToTrash: () => void;
+  onDeletePermanently: () => void;
   onCancel: () => void;
 }
 
-export function ConfirmDialog({ summary, onConfirm, onCancel }: Props) {
+export function ConfirmDialog({ summary, onMoveToTrash, onDeletePermanently, onCancel }: Props) {
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') onCancel();
@@ -20,13 +21,19 @@ export function ConfirmDialog({ summary, onConfirm, onCancel }: Props) {
       <div className="confirm-dialog card">
         <h3 id="confirm-title">Confirm cleanup</h3>
         <p>{summary}</p>
-        <p className="muted">The app bundle and selected files will be moved to Trash.</p>
+        <p className="muted">
+          Move to Trash keeps items recoverable from the Trash. Delete Permanently removes them
+          immediately and cannot be undone.
+        </p>
         <div className="btn-row confirm-actions">
           <button type="button" className="btn btn-secondary" onClick={onCancel}>
             Cancel
           </button>
-          <button type="button" className="btn btn-danger" onClick={onConfirm}>
+          <button type="button" className="btn btn-primary" onClick={onMoveToTrash}>
             Move to Trash
+          </button>
+          <button type="button" className="btn btn-danger" onClick={onDeletePermanently}>
+            Delete Permanently
           </button>
         </div>
       </div>

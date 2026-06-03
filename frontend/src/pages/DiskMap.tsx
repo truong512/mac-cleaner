@@ -132,7 +132,7 @@ export function DiskMap() {
     void runScan();
   }
 
-  function waitForTrash(path: string): Promise<DeleteResult> {
+  function waitForTrash(path: string, permanent: boolean): Promise<DeleteResult> {
     return new Promise((resolve, reject) => {
       const offDone = EventsOn('trash:done', (result: DeleteResult) => {
         offDone();
@@ -144,7 +144,7 @@ export function DiskMap() {
         offCancelled();
         reject(new Error('Delete cancelled'));
       });
-      TrashPath(path);
+      TrashPath(path, permanent);
     });
   }
 
@@ -190,11 +190,13 @@ export function DiskMap() {
 
   async function trashItem(item: DirNode) {
     const label = item.isDir
-      ? `Move folder "${item.name}" and its contents (${formatBytes(item.sizeBytes)}) to Trash`
-      : `Move file "${item.name}" to Trash`;
-    if (!(await requestConfirm(label))) {
+      ? `Remove folder "${item.name}" and its contents (${formatBytes(item.sizeBytes)})`
+      : `Remove file "${item.name}"`;
+    const choice = await requestConfirm(label);
+    if (!choice) {
       return;
     }
+    const permanent = choice === 'permanent';
 
     let keepPath = current?.path;
     if (current && (item.path === current.path || current.path.startsWith(`${item.path}/`))) {
@@ -210,9 +212,9 @@ export function DiskMap() {
 
     runTrashAction(async () => {
       try {
-        const result = await waitForTrash(item.path);
+        const result = await waitForTrash(item.path, permanent);
         if (!result.success) {
-          setError(result.error || 'Failed to move to Trash');
+          setError(result.error || (permanent ? 'Failed to delete permanently' : 'Failed to move to Trash'));
           return;
         }
 

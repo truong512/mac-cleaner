@@ -117,11 +117,10 @@ export function Applications() {
       return;
     }
     const pathCount = 1 + selectedLeftovers.size;
-    if (
-      !(await requestConfirm(
-        `Uninstall ${selected.name} and remove ${pathCount} item${pathCount === 1 ? '' : 's'}`
-      ))
-    ) {
+    const choice = await requestConfirm(
+      `Uninstall ${selected.name} and remove ${pathCount} item${pathCount === 1 ? '' : 's'}`
+    );
+    if (!choice) {
       return;
     }
     runTrashAction(
@@ -129,6 +128,7 @@ export function Applications() {
         UninstallApp({
           appPath: selected.path,
           leftoverPaths: Array.from(selectedLeftovers),
+          permanent: choice === 'permanent',
         }).catch((e: unknown) => {
           const msg = e instanceof Error ? e.message : 'Uninstall failed';
           setError(msg);

@@ -1,8 +1,6 @@
 package service
 
 import (
-	"fmt"
-
 	"mac-cleaner/internal/duplicate"
 	"mac-cleaner/internal/model"
 )
@@ -83,11 +81,11 @@ func (s *Service) FilterJunkCategoryIDsByTags(tags []string) []string {
 	return s.catalog.CategoryIDsByTags(tags)
 }
 
-func (s *Service) CleanupLastJunk() {
-	go s.runJunkCleanup()
+func (s *Service) CleanupLastJunk(permanent bool) {
+	go s.runJunkCleanup(permanent)
 }
 
-func (s *Service) runJunkCleanup() {
+func (s *Service) runJunkCleanup(permanent bool) {
 	s.mu.Lock()
 	paths := append([]string(nil), s.junkSel.paths...)
 	cats := cloneJunkCategories(s.junkSel.categories)
@@ -99,17 +97,18 @@ func (s *Service) runJunkCleanup() {
 		return
 	}
 
+	mode := deleteMode(permanent)
 	s.emitDeleteProgress(model.ScanProgress{
 		Phase:   "deleting",
 		Scanned: 0,
 		Total:   int64(total),
 		Percent: 0,
-		Message: fmt.Sprintf("Moving to Trash (0 of %d)...", total),
+		Message: mode.StartingMessage(total),
 	})
 
 	ctx, cancel := s.deleteCtx()
 	defer cancel()
-	results := s.deleteSvc.DeletePathsWithCategories(ctx, paths, "cleanup", cats, s.emitDeleteProgress)
+	results := s.deleteSvc.DeletePathsWithCategories(ctx, paths, "cleanup", cats, mode, s.emitDeleteProgress)
 	report := s.reportFromResults(results)
 	s.pruneJunkItemsByDeleteResults(results)
 	if ctx.Err() != nil {
@@ -196,11 +195,11 @@ func (s *Service) SelectBigFilesLargeOnly() {
 	s.rebuildBigFilesSelectionLocked()
 }
 
-func (s *Service) CleanupLastBigFiles() {
-	go s.runBigFilesCleanup()
+func (s *Service) CleanupLastBigFiles(permanent bool) {
+	go s.runBigFilesCleanup(permanent)
 }
 
-func (s *Service) runBigFilesCleanup() {
+func (s *Service) runBigFilesCleanup(permanent bool) {
 	s.mu.Lock()
 	paths := append([]string(nil), s.bigFilesSel.paths...)
 	cats := cloneJunkCategories(s.bigFilesSel.categories)
@@ -212,17 +211,18 @@ func (s *Service) runBigFilesCleanup() {
 		return
 	}
 
+	mode := deleteMode(permanent)
 	s.emitDeleteProgress(model.ScanProgress{
 		Phase:   "deleting",
 		Scanned: 0,
 		Total:   int64(total),
 		Percent: 0,
-		Message: fmt.Sprintf("Moving to Trash (0 of %d)...", total),
+		Message: mode.StartingMessage(total),
 	})
 
 	ctx, cancel := s.deleteCtx()
 	defer cancel()
-	results := s.deleteSvc.DeletePathsWithCategories(ctx, paths, "cleanup", cats, s.emitDeleteProgress)
+	results := s.deleteSvc.DeletePathsWithCategories(ctx, paths, "cleanup", cats, mode, s.emitDeleteProgress)
 	report := s.reportFromResults(results)
 	s.pruneBigFilesItemsByDeleteResults(results)
 	if ctx.Err() != nil {
@@ -249,7 +249,7 @@ func (s *Service) SetDuplicateKeepers(keepers map[string]string) {
 	s.mu.Unlock()
 }
 
-func (s *Service) CleanupLastDuplicates() {
+func (s *Service) CleanupLastDuplicates(permanent bool) {
 	s.mu.Lock()
 	groups := s.lastDupGroups
 	keepers := s.lastDupKeepers
@@ -266,7 +266,7 @@ func (s *Service) CleanupLastDuplicates() {
 		g.Keeper = keeper
 		paths = append(paths, duplicate.PathsToDelete(g)...)
 	}
-	s.cleanupPathsAsync(paths, nil, "duplicates")
+	s.cleanupPathsAsync(paths, nil, "duplicates", permanent)
 }
 
 func cloneKeepers(in map[string]string) map[string]string {
